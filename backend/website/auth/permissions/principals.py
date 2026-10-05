@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from datetime import datetime, timezone
+from typing import Literal
 
 from website.auth.utils import _trusted_client_ip
 from website.core.crypto.signer import verify_signed_url
@@ -21,22 +22,12 @@ class SharePrincipal:
 
 @dataclass(frozen=True)
 class SignedResourcePrincipal:
-    file_id: str
+    resource_id: str
+    resource_kind: Literal["file", "zip"]
     expires_at: datetime
     client_ip: str | None
-    share_id: str | None
+    share_id: str | None = None
 
-
-@dataclass(frozen=True)
-class SignedZIPPrincipal:
-    zip_id: str
-    expires_at: datetime
-
-@dataclass(frozen=True)
-class WorkPrincipal:
-    work_type: str
-    work_id: str
-    owner_id: int
 
 class PrincipalFactory:
     @staticmethod
@@ -64,13 +55,19 @@ class PrincipalFactory:
     def from_signed_request(request, file_id: str, share_id: str | None = None) -> SignedResourcePrincipal:
         expires = verify_signed_url(request)
         return SignedResourcePrincipal(
-            file_id=file_id,
+            resource_id=file_id,
+            resource_kind="file",
             expires_at=datetime.fromtimestamp(expires, tz=timezone.utc),
             client_ip=_trusted_client_ip(request),
             share_id=share_id,
         )
 
     @staticmethod
-    def from_signed_zip_request(request, zip_id: str) -> SignedZIPPrincipal:
+    def from_signed_zip_request(request, zip_id: str) -> SignedResourcePrincipal:
         expires = verify_signed_url(request)
-        return SignedZIPPrincipal(zip_id, datetime.fromtimestamp(expires, tz=timezone.utc))
+        return SignedResourcePrincipal(
+            resource_id=zip_id,
+            resource_kind="zip",
+            expires_at=datetime.fromtimestamp(expires, tz=timezone.utc),
+            client_ip=_trusted_client_ip(request),
+        )

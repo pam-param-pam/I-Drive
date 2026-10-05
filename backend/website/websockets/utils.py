@@ -8,6 +8,7 @@ from django.db import transaction
 
 from ..constants import EventCode
 from ..core.Serializers import FolderSerializer, FileSerializer
+from website.queries.display import load_file_displays, load_folder_displays
 from website.core.http.context import RequestContext
 from ..models import File, Folder
 
@@ -29,9 +30,14 @@ def group_and_send_event(context: RequestContext, op_code: EventCode, resources:
     grouped_files = defaultdict(list)
     parent_mapping = {}
     serialized_files = {
-        item["id"]: item for item in FileSerializer.serialize_many(
+        item["id"]: item for item in FileSerializer.serialize_many(load_file_displays(
             resource for resource in resources if isinstance(resource, File)
-        )
+        ))
+    }
+
+    serialized_folders = {
+        str(row["id"]): FolderSerializer.serialize_dict(row)
+        for row in load_folder_displays(resource for resource in resources if isinstance(resource, Folder))
     }
 
     for resource in resources:
@@ -42,7 +48,7 @@ def group_and_send_event(context: RequestContext, op_code: EventCode, resources:
     for parent_id, items in grouped_files.items():
         parent = parent_mapping[parent_id]
         send_event(context, parent, op_code, [
-            FolderSerializer.serialize_object(item) if isinstance(item, Folder)
+            serialized_folders[str(item.id)] if isinstance(item, Folder)
             else serialized_files[str(item.id)] for item in items
         ])
 

@@ -6,7 +6,7 @@ from itertools import batched
 from django.contrib.auth import get_user_model
 
 from website.auth.permissions import (
-    ResourceAction, SignedResourcePrincipal, SignedZIPPrincipal)
+    ResourceAction, SignedResourcePrincipal)
 from website.config import MAX_THUMBNAIL_SIZE
 from website.constants import cache, MAX_MEDIA_CACHE_AGE
 from website.core.converters import param_to_bool
@@ -169,7 +169,7 @@ def get_file_response(request, principal: SignedResourcePrincipal):
     return response
 
 
-def get_zip_response(request, principal: SignedZIPPrincipal):
+def get_zip_response(request, principal: SignedResourcePrincipal):
     user_zip, roots, scope = authorizer.require_signed_zip(principal)
     user = get_user_model().objects.filter(id=user_zip.owner_id).first()
     if user is None:

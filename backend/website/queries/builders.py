@@ -1,3 +1,4 @@
+from website.queries.display import load_file_display
 from website.queries.resource_loader import ResourceLoader
 import time
 from typing import Dict
@@ -36,7 +37,7 @@ def build_share_resource_dict(resource_in_share: Folder | File) -> Dict:
     if isinstance(resource_in_share, Folder):
         resource_dict = ShareFolderSerializer.serialize_object(resource_in_share)
     else:
-        resource_dict = ShareFileSerializer.serialize_object(resource_in_share)
+        resource_dict = ShareFileSerializer.serialize_dict(load_file_display(resource_in_share.id, resource_in_share.owner_id))
 
     return resource_dict
 
@@ -65,7 +66,7 @@ def _add_credential_status(data, cred):
 
 def build_discord_settings(user) -> dict:
     settings = user.discordsettings
-    webhooks = Webhook.objects.filter(owner=user).order_by('created_at')
+    webhooks = Webhook.objects.filter(owner=user).select_related("channel").order_by('created_at')
     bots = Bot.objects.filter(owner=user).order_by('created_at')
     channels_count = Channel.objects.filter(owner=user).count()
 

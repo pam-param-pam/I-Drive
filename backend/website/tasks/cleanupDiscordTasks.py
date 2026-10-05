@@ -12,7 +12,7 @@ from website.models import Channel, File
 from website.models.mixin_models import ItemState
 from website.models.other_models import NotificationType, NotificationKind
 from website.queries.selectors import check_if_bots_exists, query_attachments
-from website.services import item_service, user_service
+from website.services import deletion_service, user_service
 from website.tasks.helper import is_bulk_deletable, format_cleanup_summary
 
 
@@ -125,13 +125,7 @@ def cleanup_remote_missing_files(user_id: int) -> int:
     if not files:
         return 0
 
-    item_service.delete_items(
-        RequestContext.from_user(user.id),
-        user,
-        files,
-    )
-
-    return len(files)
+    return deletion_service.request_remote_missing_deletion(user.id, [str(file.pk) for file in files])
 
 @app.task(queue="cleanup", acks_late=True, reject_on_worker_lost=True)
 def cleanup_user_discord(user_id: int):

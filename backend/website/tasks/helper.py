@@ -14,11 +14,11 @@ def snowflake_to_datetime(snowflake_id: str):
     timestamp_ms = (snowflake >> 22) + DISCORD_EPOCH
     return datetime.fromtimestamp(timestamp_ms / 1000, timezone.utc)
 
-def is_bulk_deletable(message_id: str):
+def is_bulk_deletable(message_id: str, max_age: timedelta = timedelta(days=13, hours=23)):
     ts = snowflake_to_datetime(message_id)
     age = datetime.now(timezone.utc) - ts
     # avoid race conditions
-    return age < timedelta(days=13, hours=23)
+    return age < max_age
 
 def format_cleanup_summary(res: dict) -> LiteralString | None:
     parts = []

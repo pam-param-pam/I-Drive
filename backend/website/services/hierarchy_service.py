@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from typing import Iterable
 
 from website.config import MAX_FOLDER_DEPTH
-from website.core.errors import BadRequestError, MalformedDatabaseState, ResourceNotFoundError, ResourcePermissionError
+from website.core.errors import BadRequestError, ConcurrentModificationError, MalformedDatabaseState, ResourceNotFoundError, ResourcePermissionError
 from website.models import DeletionScope, Folder
 from website.queries.hierarchy import load_folder_hierarchy
 
@@ -36,7 +36,7 @@ def lock_folder_chains(owner_id: int, folder_ids: Iterable[str]) -> LockedHierar
         or folder.subtree_height_bound != snapshot_folders[folder_id].subtree_height_bound
         for folder_id, folder in folders.items()
     ):
-        raise BadRequestError("Folder hierarchy changed concurrently; retry the request")
+        raise ConcurrentModificationError("Folder hierarchy changed concurrently; retry the request")
 
     return LockedHierarchy(folders, snapshot_chains)
 
@@ -64,7 +64,9 @@ def assert_no_active_scope_in_subtree(owner_id: int, folder_id: str) -> None:
             root_folder_id__isnull=False,
         ).values_list("root_folder_id", flat=True)
     )
-    pending = {str(value) for value in roots}
+    file_parents = DeletionScope.objects.filter(owner_id=owner_id, state=DeletionScope.State.ACTIVE,
+        root_file_id__isnull=False).values_list("root_file__parent_id", flat=True)
+    pending = {str(value) for value in (*roots, *file_parents)}
     seen: set[str] = set()
     for _ in range(MAX_FOLDER_DEPTH + 2):
         if str(folder_id) in pending:

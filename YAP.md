@@ -1,93 +1,42 @@
-# How it works
+# How iDrive works
 
-In essence, **I Drive** simply takes your upload files, and splits them into chunks to fit in Discord's (10Mb) file size limit. 
-They are then encrypted and uploaded to Discord. After the upload is done, file's metadata is sent to backend and stored into a backend database.
-This allows for a simple way of viewing, managing, and downloading of your files.
+iDrive stores file bytes as Discord attachments and keeps their metadata in PostgreSQL. The browser upload pipeline prepares fragments, encryption, checksums, thumbnails and media metadata, uploads attachments through webhooks, then submits the resulting metadata to Django.
 
+## Components
 
-# Technical Details
-In reality the Frontend does a LOT more than just splitting the file into chunks.
-It has to:
-- Calculate crc checksum 
-- Generate media metadata
-- Generate thumbnails
-- Extract subtitles
-- Encrypt the file
-- Efficiently package multiple files into a single discord request
-- And more!
+| Component | Current responsibility |
+| --- | --- |
+| Vue 3 / Vite frontend | Browsing, uploads, downloads, previews, Pinia state and translated WebSocket toasts. |
+| Django / DRF / Daphne / Channels backend | Authentication, resource authorization, metadata mutations, signed downloads and streaming. |
+| PostgreSQL | Metadata, adjacency-list hierarchy, lifecycle markers, aggregates and durable work. |
+| Redis | Caches, Celery broker, Channels layer and shared Discord credential/rate-limit state. |
+| Celery and Beat | Move/trash/restore batches, folder hash/height repairs, raw-image thumbnails and scheduled cleanup. |
+| NGINX | Production frontend serving and backend proxying. |
+| Prometheus / Grafana | Metrics and provisioned monitoring dashboards. |
 
-The same thing applies to pretty much every part of this app. Even if something looks simple at first glance. 
-It's most likely pretty complicated under the hood. 
-After all, this entire project has more than **36k** lines of code. 
-And another **2k** of configuration and translation lines.
+The backend streams fragments from Discord, supports range requests and server decryption, and builds streaming ZIP downloads. The frontend also supports client decryption. Upload sizes and Discord request limits are configuration/runtime concerns; this document does not assume a fixed platform limit or request rate.
 
+Webhooks upload attachments without exposing bot tokens to the browser. Backend bot credentials support Discord API operations. The Discord integration tracks credential availability and rate limits; adding credentials does not eliminate channel or global limits.
 
-## Infrastructure
+## Namespace state
 
-**I Drive** is made up of 5 main components.
+Celery uses `RecursiveTaskDiscovery` to lazily import `tasks.py` or every Python
+module beneath an installed Django app's `tasks/` directory, including nested
+directories. New task modules do not need a manual Celery `include` entry.
 
-### Frontend
+`Folder.parent_id` is the hierarchy. Explicit trash uses `trashed_at` on files/folders. Folder locks use `FolderLockScope`; deletion uses active `DeletionScope` records alongside the existing resource lifecycle fields. Authorization resolves current ancestry and inherited state.
 
-Frontend is made with _vue3_ + _vite_. 
-Vue Router is used for routing and Pinia as global state management.<br>
-It's then built and served statically by NGINX.               
+Move, trash and restore requests persist a `NamespaceOperation` and return HTTP 202. Workers commit bounded batches and cursor advancement together. Permanent deletion establishes a logical scope barrier, processes bounded child/attachment pages, finalizes empty folders, and recovers through a 15-second supervisor.
 
-Why vue? Its data-driven approach makes it ideal for application which DOM is based on the underlying data.
+## Implementation references
 
-### Backend
+- [Resource authorization](authorization-access-api.md)
+- [File and folder services](file-folder-services.md)
+- [Folder hierarchy, hashes and root policies](folder-operations.md)
+- [Locking](locking.md)
+- [Stored aggregates](stored-resource-aggregates.md)
+- [Projected reads](read-permission-fast-path.md)
+- [Namespace Celery operations](namespace-celery-operations.md)
+- [Permanent deletion status](delete.md)
 
-Backend is made with 🐍 Python, Django, Daphne, Channels, Rest Framework 🐍.<br>
-It's responsible for authenticating users and communicating with a database. 
-It uses REST API to both serve & modify data.
-It has more than 85 different endpoints.
-
-Backend uses websockets to send events to the client such as: _data changes, notifications, messages etc_.<br>
-It's also responsible for streaming files from Discord. 
-It supports partial requests, streaming, in browser video/audio seeking, decryption.
-
-Thanks to a [custom zipFly](https://github.com/pam-param-pam/ZipFly) library it also supports streaming zip files "on the fly".
-
-
-### Database
-Postgres is currently used as a database.
-
-### Redis
-Redis is used as a fast in memory database for caching and message broker for celery.
-It also serves as a channel layer for django websockets.
-It's also used as a global memory for all python processes to manage discord's ratelimits.
-
-### Celery
-Asynchronous task queue for delegating long tasks outside of HTTP call lifecycle like:
-1) File deletion 
-2) Generating thumbnails out of Raw Images
-3) Periodically cleaning up the database
-4) Moving files between folders or to Trash
-
-### Monitoring
-Prometheus collects application and infrastructure metrics for local monitoring.
-Grafana visualizes those metrics through provisioned dashboards, making the system's health and performance easier to inspect.
-
-## Solving Discord's rate limit problems
-    
-On average Discord allows a single bot to make 1 request a second, that's way too little! 
-That's why, for **iDrive** to work, a single user needs at least few bots, 
-this way backend can switch between tokens and bypass Discord's ratelimits. 
-The same thing applies to Discord channels and webhooks. 
-Sadly discord still groups all requests per ip as well, so the ratelimits are still sometimes hit.
-
-Discord issues cloudflare bans if you make more than 10k 4xx requests in 10 minutes. 
-**iDrive** tries to avoid this as much as possible, including throwing 502 errors when it can't handle more requests.
-
-
-## Why use both webhooks and Discord bots? 
-Why are webhooks needed? Why not use Discord bots to upload files?
-
-Discord bots are in my opinion too powerful to send tokens back and forth in the browser. 
-In an unlikely situation, a third party could steal bot's token and access all 
-files stored(encrypted or not) on a Discord server. 
-Discord bots if given too many permissions would also allow for easy raiding and greefing.
-
-Webhooks on the other hand can only send messages, and delete/modify their own ones.
-
-## Why is this/that so slow!
-It's written in python, what do you expect. Rewrite it in rust!
+See [README.md](README.md) for setup and [TODO.md](TODO.md) for current gaps.

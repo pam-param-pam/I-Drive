@@ -1,5 +1,3 @@
-from website.queries.resource_loader import ResourceLoader
-from website.auth.permissions import ResourceRef, ResourceType
 import base64
 from abc import abstractmethod, ABC
 from typing import Iterable
@@ -10,7 +8,13 @@ from website.models import File, Folder, ShareableLink, ShareAccessEvent, ShareA
     PerDeviceToken, UserZIP
 from website.models.file_related_models import PhotoMetadata, RawMetadata, SubtitleTrack, Moment
 from website.models.other_models import Notification
-from website.services.share_service import get_item_inside_share
+
+
+def _loaded_relation(obj, field: str):
+    """Require query callers to supply related display data eagerly."""
+    if field not in obj._state.fields_cache:
+        raise ValueError(f"Load {field} before serializing {type(obj).__name__}")
+    return obj._state.fields_cache[field]
 
 
 class SimpleSerializer(ABC):
@@ -62,87 +66,20 @@ class AdvancedSerializer(ABC):
         raise NotImplementedError
 
 
-class FileSerializer(AdvancedSerializer):
+class FileSerializer:
+    """Format explicit display projections; never load models or hierarchy."""
 
     @classmethod
-    def _load_tuples(
-        cls,
-        file_objects: tuple[File, ...],
-        effective_lock_scope_id: str | None = None,
-        lock_context_resolved: bool = False,
-    ) -> dict[str, tuple]:
-        lock_fields = {"is_locked", "lock_from_id", "lock_from_name"}
-        value_fields = tuple(field for field in File.DISPLAY_VALUES if field not in lock_fields)
-        values_by_id = {
-            str(values["id"]): values
-            for row in (
-                File.objects.filter(id__in=[obj.id for obj in file_objects])
-                .annotate(**File.get_display_annotate())
-                .values_list(*value_fields)
-            )
-            for values in (dict(zip(value_fields, row)),)
-        }
-
-        if lock_context_resolved:
-            for values in values_by_id.values():
-                values["is_locked"] = effective_lock_scope_id is not None
-                values["lock_from_id"] = effective_lock_scope_id
-                values["lock_from_name"] = None
-        else:
-            by_owner: dict[int, list[str]] = {}
-            for file_id, values in values_by_id.items():
-                by_owner.setdefault(values["owner_id"], []).append(file_id)
-            for owner_id, file_ids in by_owner.items():
-                contexts = ResourceLoader().resolve_many(
-                    tuple(ResourceRef(ResourceType.FILE, file_id) for file_id in file_ids), owner_id,
-                )
-                for context in contexts:
-                    values = values_by_id[context.resource_id]
-                    values["is_locked"] = context.is_locked
-                    values["lock_from_id"] = context.effective_lock_scope_id
-                    values["lock_from_name"] = context.effective_lock_scope_name
-
-        return {
-            file_id: tuple(values[field] for field in File.DISPLAY_VALUES)
-            for file_id, values in values_by_id.items()
-        }
+    def serialize_tuple(cls, tuple_data: tuple, hide=False, sign_urls: bool = True) -> dict:
+        return cls._serialize(tuple_data, hide, sign_urls)
 
     @classmethod
-    def serialize_many(
-        cls,
-        file_objects: Iterable[File],
-        hide=False,
-        sign_urls: bool = True,
-        effective_lock_scope_id: str | None = None,
-        lock_context_resolved: bool = False,
-    ) -> list[dict]:
-        file_objects = tuple(file_objects)
-        if not file_objects:
-            return []
-
-        tuples_by_id = cls._load_tuples(
-            file_objects, effective_lock_scope_id=effective_lock_scope_id,
-            lock_context_resolved=lock_context_resolved,
-        )
-        return [
-            cls.serialize_tuple(tuples_by_id[str(obj.id)], hide=hide, sign_urls=sign_urls)
-            for obj in file_objects
-            if str(obj.id) in tuples_by_id
-        ]
+    def serialize_dict(cls, row: dict, hide=False, sign_urls: bool = True) -> dict:
+        return cls.serialize_tuple(tuple(row[field] for field in File.DISPLAY_VALUES), hide, sign_urls)
 
     @classmethod
-    def _object_to_tuple(cls, obj) -> tuple:
-        file_tuple = cls._load_tuples((obj,)).get(str(obj.id))
-
-        if not file_tuple:
-            raise ValueError("File not found during fallback.")
-
-        return file_tuple
-
-    @staticmethod
-    def _dict_to_tuple(dict_data: dict) -> tuple:
-        tuple_data = tuple(dict_data.get(key) for key in File.DISPLAY_VALUES)
-        return tuple_data
+    def serialize_many(cls, rows: Iterable[dict], hide=False, sign_urls: bool = True) -> list[dict]:
+        return [cls.serialize_dict(row, hide, sign_urls) for row in rows]
 
     @staticmethod
     def _serialize(tuple_data: tuple, hide=False, sign_urls: bool = True) -> dict:
@@ -265,7 +202,7 @@ class ShareFileSerializer(FileSerializer):
         return d
 
 
-class FolderSerializer(SimpleSerializer):
+class FolderSerializer:
 
     @staticmethod
     def serialize_dict(row: dict) -> dict:
@@ -283,30 +220,9 @@ class FolderSerializer(SimpleSerializer):
             result["in_trash_since"] = row["trashed_at"].isoformat()
         return result
 
-    @staticmethod
-    def serialize_object(folder_obj: Folder) -> dict:
-        context = ResourceLoader().resolve_folder(str(folder_obj.id), folder_obj.owner_id)
-        is_locked = context.is_locked
-        folder_dict = {
-            'isDir': True,
-            'id': folder_obj.id,
-            'name': folder_obj.name,
-            'parent_id': folder_obj.parent_id,
-            'size': folder_obj.visible_descendant_file_size,
-            'folder_count': folder_obj.visible_descendant_folder_count,
-            'file_count': folder_obj.visible_descendant_file_count,
-            'created': folder_obj.created_at.isoformat(),
-            'last_modified': folder_obj.last_modified_at.isoformat(),
-            'isLocked': is_locked,
-        }
-
-        if is_locked:
-            folder_dict['lockFrom'] = context.effective_lock_scope_id
-
-        if folder_obj.trashed_at is not None:
-            folder_dict["in_trash_since"] = folder_obj.trashed_at.isoformat()
-
-        return folder_dict
+    @classmethod
+    def serialize_many(cls, rows: Iterable[dict]) -> list[dict]:
+        return [cls.serialize_dict(row) for row in rows]
 
 
 class ShareFolderSerializer(SimpleSerializer):
@@ -326,8 +242,8 @@ class ShareFolderSerializer(SimpleSerializer):
 class ShareSerializer(SimpleSerializer):
 
     @staticmethod
-    def serialize_object(share: ShareableLink) -> dict:
-        obj = get_item_inside_share(share)
+    def serialize_object(share: ShareableLink, *, resource: File | Folder) -> dict:
+        obj = resource
 
         is_dir = isinstance(obj, Folder)
 
@@ -349,7 +265,7 @@ class ShareAccessSerializer(SimpleSerializer):
     def serialize_object(access: ShareAccess) -> dict:
         return {
             "id": access.id,
-            "user": access.accessed_by.username if access.accessed_by else None,
+            "user": _loaded_relation(access, "accessed_by").username if access.accessed_by_id else None,
             "ip": access.ip,
             "user_agent": access.user_agent,
             "access_time": access.access_time.isoformat() if access.access_time else None,
@@ -382,8 +298,8 @@ class WebhookSerializer(SimpleSerializer):
             "discord_id": webhook.discord_id,
             "url": webhook.url,
             "channel": {
-                "id": webhook.channel.discord_id,
-                "name": webhook.channel.name
+                "id": _loaded_relation(webhook, "channel").discord_id,
+                "name": _loaded_relation(webhook, "channel").name
             }
         }
 
@@ -404,12 +320,12 @@ class MomentSerializer(SimpleSerializer):
 
     @staticmethod
     def serialize_object(moment: Moment) -> dict:
-        path = f"/files/{moment.file.id}/moments/{moment.id}/stream"
+        path = f"/files/{moment.file_id}/moments/{moment.id}/stream"
         signed = sign_resource(path)
         url = f"{API_BASE_URL}{path}{signed}"
 
         return {
-            "file_id": moment.file.id,
+            "file_id": moment.file_id,
             "id": moment.id,
             "timestamp": moment.timestamp,
             "created_at": moment.created_at,
@@ -452,11 +368,11 @@ class SubtitleSerializer(SimpleSerializer):
 
     @staticmethod
     def serialize_object(subtitle: Subtitle) -> dict:
-        path = f"/files/{subtitle.file.id}/subtitles/{subtitle.id}/stream"
+        path = f"/files/{subtitle.file_id}/subtitles/{subtitle.id}/stream"
         signed = sign_resource(path)
         url = f"{API_BASE_URL}{path}{signed}"
         return {
-            "file_id": subtitle.file.id,
+            "file_id": subtitle.file_id,
             "id": subtitle.id,
             "language": subtitle.language,
             "url": url,

@@ -4,11 +4,12 @@ from datetime import timedelta
 from celery import Celery
 from celery.schedules import crontab
 
+from website.core.task_discovery import RecursiveTaskDiscovery
 
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "website.settings")
-app = Celery("website", include=["website.tasks.namespaceTasks"])
+app = Celery("website")
 app.config_from_object("django.conf:settings", namespace="CELERY")
-app.autodiscover_tasks()
+app.autodiscover_tasks(RecursiveTaskDiscovery(), related_name=None)
 
 @app.on_after_finalize.connect
 def setup_periodic_tasks(sender, **kwargs):
@@ -30,6 +31,11 @@ def setup_periodic_tasks(sender, **kwargs):
         from website.tasks.cleanupDatabaseTasks import cleanup_user_db
         from website.tasks.derivedStateTasks import process_folder_hash_work, process_folder_height_repairs
         from website.tasks.namespaceTasks import recover_namespace_operations
+        from website.tasks.deletion.workflow import recover_deletion_scopes
+
+        sender.add_periodic_task(
+            timedelta(seconds=15), recover_deletion_scopes.s(), name="recover-deletion-scopes",
+        )
 
         sender.add_periodic_task(
             timedelta(seconds=15), recover_namespace_operations.s(), name="recover-namespace-operations",

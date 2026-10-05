@@ -166,7 +166,7 @@ def delete_share(principal: UserPrincipal, share_id: str) -> None:
 
 def get_share_accesses(principal: UserPrincipal, share_id: str):
     share = _get_owned_share(principal, share_id)
-    return ShareAccess.objects.filter(share_id=share.id)
+    return ShareAccess.objects.filter(share_id=share.id).select_related("accessed_by")
 
 
 def get_share_events(principal: UserPrincipal, share_id: str, visit_id: str):

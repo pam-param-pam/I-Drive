@@ -6,6 +6,8 @@ from website.core.errors import DiscordError
 from website.discord.Discord import discord
 from website.models import DiscordAttachmentMixin
 from website.queries.selectors import query_attachments
+from django.db import transaction
+from website.services import namespace_lock_service
 
 
 def _handle_missing_media_attachment(resource: DiscordAttachmentMixin, owner, file_obj: File, error: DiscordError) -> None:
@@ -56,6 +58,12 @@ def get_attachment_url(user, resource: DiscordAttachmentMixin, file: File | str,
 
 
 def delete_remote_single_discord_attachment(user, resource: DiscordAttachmentMixin) -> None:
+    with transaction.atomic():
+        namespace_lock_service.lock_owner_scope_exclusive(user.pk)
+        _delete_remote_single_discord_attachment(user, resource)
+
+
+def _delete_remote_single_discord_attachment(user, resource: DiscordAttachmentMixin) -> None:
     database_attachments = query_attachments(message_id=resource.message_id)
 
     all_attachments_ids = set()
@@ -72,5 +80,5 @@ def delete_remote_single_discord_attachment(user, resource: DiscordAttachmentMix
         else:
             discord.delete_message(user, resource.channel.discord_id, resource.message_id)
     except DiscordError as e:
-        if e.status != 404: # unknown message, unknown attachment
+        if e.status != 404 or e.code != ERROR_UNKNOWN_MESSAGE:
             raise

@@ -1,14 +1,15 @@
 from dataclasses import asdict, dataclass
 
 from django.db import transaction
+from django.utils import timezone
 
 from website.auth.permissions import (
     CredentialSet, ResourceAction, UserPrincipal,
 )
 from website.core.errors import BadRequestError, ResourceNotFoundError
 from website.core.helpers import validate_ids_as_list
-from website.models import File, Folder, NamespaceOperation
-from website.queries.hierarchy import get_descendant_folder_ids
+from website.models import File, Folder, NamespaceOperation, DeletionJob, DeletionScope
+from website.queries.hierarchy import get_descendant_folder_ids, load_folder_hierarchy
 from website.auth.permissions import ResourceType
 from website.services.file_service import FileService
 from website.services.folder_service import FolderService
@@ -92,10 +93,8 @@ def restore(principal: UserPrincipal, item_ids: list[str], credentials: Credenti
 
 
 def _submit_operation(principal, item_ids, action, credentials, destination_id=None):
-    from website.tasks.namespaceTasks import publish_namespace_operation
+    from website.tasks.namespaceTasks import process_namespace_operation
 
-    if not principal.request_id:
-        raise BadRequestError("A request ID is required")
     credentials = credentials or CredentialSet.empty()
     with transaction.atomic():
         namespace_lock_service.lock_owner_scope_shared(principal.user_id)
@@ -112,21 +111,47 @@ def _submit_operation(principal, item_ids, action, credentials, destination_id=N
                 or operation.refs != stored_refs):
             raise BadRequestError("Request ID already belongs to another operation")
         if created:
-            transaction.on_commit(lambda: publish_namespace_operation(str(operation.pk)), robust=True)
+            transaction.on_commit(lambda: process_namespace_operation.delay(str(operation.pk)), robust=True)
         return operation
 
 
 def request_deletion(principal: UserPrincipal, item_ids: list[str], credentials: CredentialSet):
-    refs = classify_item_ids(principal, item_ids)
     with transaction.atomic():
+        namespace_lock_service.lock_owner_scope_exclusive(principal.user_id)
+        validate_ids_as_list(item_ids, max_length=10000, child_type=str)
+        existing = DeletionJob.objects.filter(requested_by_id=principal.user_id,
+            state__in=[DeletionJob.State.PENDING, DeletionJob.State.PLANNING, DeletionJob.State.RUNNING]).first()
+        if existing:
+            if (principal.request_id and existing.request_context.get("request_id") == principal.request_id
+                    and sorted(existing.requested_ids) == sorted(item_ids)):
+                return existing
+            raise BadRequestError("A deletion request is already in progress")
+        refs = classify_item_ids(principal, item_ids)
+        # Authorize every requested item before normalization or recording work.
+        items = authorizer.require_items(principal, ResourceAction.REQUEST_DELETE,
+            file_ids=[ref.id for ref in refs if ref.type == "file"],
+            folder_ids=[ref.id for ref in refs if ref.type == "folder"], credentials=credentials)
+        selected_folders = {str(item.pk) for item in items if isinstance(item, Folder)}
+        _, chains = load_folder_hierarchy({str(item.pk) if isinstance(item, Folder)
+                                          else str(item.parent_id) for item in items})
+        normalized = [item for item in items if not selected_folders.intersection(
+            chains[str(item.pk)][1:] if isinstance(item, Folder) else chains[str(item.parent_id)])]
+        job = DeletionJob.objects.create(requested_by_id=principal.user_id, request_context=asdict(principal),
+            requested_ids=item_ids, state=DeletionJob.State.RUNNING)
         results = []
-        file_ids = [ref.id for ref in refs if ref.type == "file"]
+        file_ids = [str(item.pk) for item in normalized if isinstance(item, File)]
         if file_ids:
             results.extend(FileService.request_deletion(principal, file_ids, credentials))
-        for ref in refs:
-            if ref.type == "folder":
-                results.append(FolderService.request_deletion(principal, ref.id, credentials))
-        return tuple(results)
+        for item in normalized:
+            if isinstance(item, Folder):
+                results.append(FolderService.request_deletion(principal, str(item.pk), credentials))
+        scopes = DeletionScope.objects.filter(pk__in=[result.operation_id for result in results])
+        job.total_file_items = sum(scope.physical_file_count for scope in scopes)
+        job.total_folder_items = sum(scope.physical_folder_count for scope in scopes)
+        job.started_at = job.heartbeat_at = timezone.now()
+        job.save(update_fields=["total_file_items", "total_folder_items", "started_at", "heartbeat_at"])
+        scopes.update(job=job)
+        return job
 
 
 def rename(principal: UserPrincipal, item_id: str, name: str, credentials: CredentialSet):

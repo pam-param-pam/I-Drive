@@ -3,8 +3,8 @@ from .drf import AllowedNetwork
 from .policies import ResourceAction, ResourceType
 from .contexts import ResourceContext, ResourceRef
 from .principals import (
-    PrincipalFactory, SharePrincipal, SignedResourcePrincipal, SignedZIPPrincipal,
-    UserPrincipal, WorkPrincipal,
+    PrincipalFactory, SharePrincipal, SignedResourcePrincipal,
+    UserPrincipal,
 )
 from website.core.errors import PasswordChallenge, PermissionPasswordError
 
@@ -13,6 +13,5 @@ from website.core.errors import PasswordChallenge, PermissionPasswordError
 __all__ = [
     "AllowedNetwork", "CredentialSet", "PasswordChallenge", "PermissionPasswordError",
     "PrincipalFactory", "ResourceAction", "ResourceContext", "ResourceRef", "ResourceType",
-    "SharePrincipal", "SignedResourcePrincipal", "SignedZIPPrincipal", "UserPrincipal",
-    "WorkPrincipal", "extract_resource_credentials",
+    "SharePrincipal", "SignedResourcePrincipal", "UserPrincipal", "extract_resource_credentials",
 ]

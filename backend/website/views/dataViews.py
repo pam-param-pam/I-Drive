@@ -1,3 +1,4 @@
+from website.queries.display import load_file_display, load_folder_display, load_folder_displays
 from website.services.media_service import iter_download_files
 import base64
 import hashlib
@@ -60,9 +61,12 @@ def get_folder_info(request, folder_id):
         return response
 
     children = authorizer.list_children(principal, folder_id, credentials)
-    folder_content = FolderSerializer.serialize_object(folder_obj)
+    folder_content = FolderSerializer.serialize_dict(load_folder_display(folder_obj.id, folder_obj.owner_id))
+    folder_rows = {str(row["id"]): row for row in load_folder_displays(
+        child for child in children if isinstance(child, Folder)
+    )}
     folder_content["children"] = [
-        FolderSerializer.serialize_object(child) if isinstance(child, Folder)
+        FolderSerializer.serialize_dict(folder_rows[str(child.id)]) if isinstance(child, Folder)
         else FileSerializer.serialize_dict(child, sign_urls=False)
         for child in children
     ]
@@ -103,7 +107,7 @@ def get_folder_info(request, folder_id):
 def get_file_info(request, file_id):
     principal, credentials = _inputs(request)
     file_obj = authorizer.require_item(principal, ResourceAction.DOWNLOAD, file_id, credentials, resource_type=ResourceType.FILE)
-    file_content = FileSerializer.serialize_object(file_obj)
+    file_content = FileSerializer.serialize_dict(load_file_display(file_obj.id, file_obj.owner_id))
     return JsonResponse(file_content)
 
 

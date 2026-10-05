@@ -1,5 +1,3 @@
-"""Transient namespace facts. These are data, never permission grants."""
-
 from dataclasses import dataclass
 
 from .policies import ResourceType
@@ -24,8 +22,6 @@ class FolderState:
 
 @dataclass(frozen=True)
 class ResourceContext:
-    """Display/maintenance snapshot; bulk authorization uses shared FolderState."""
-
     resource_type: ResourceType
     resource_id: str
     owner_id: int

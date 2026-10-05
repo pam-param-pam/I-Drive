@@ -29,7 +29,7 @@ def check_if_bots_exists(user) -> int:
 DiscordAttachmentClasses = get_classes_extending_discordAttachmentMixin()
 
 
-def query_attachments(channel_id=None, message_id=None, attachment_id=None, author_id=None, owner=None) -> list[DiscordAttachmentMixin]:
+def query_attachments(channel_id=None, message_id=None, attachment_id=None, author_id=None, owner=None, message_keys=None) -> list[DiscordAttachmentMixin]:
     # Create a Q object to build the query
     query = Q()
 
@@ -45,9 +45,15 @@ def query_attachments(channel_id=None, message_id=None, attachment_id=None, auth
     if owner:
         query &= Q(file__owner=owner)
 
+    if message_keys is not None:
+        message_query = Q(pk__in=[])
+        for channel_key, message_key in message_keys:
+            message_query |= Q(channel_id=channel_key, message_id=message_key)
+        query &= message_query
+
     # Query each model and filter based on the query
     combined_results = []
     for cls in DiscordAttachmentClasses:
-        combined_results.extend(cls.objects.filter(query))
+        combined_results.extend(cls.objects.filter(query).select_related("file", "channel", "author"))
 
     return combined_results

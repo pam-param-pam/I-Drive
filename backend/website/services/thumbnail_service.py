@@ -3,6 +3,7 @@ from django.contrib.auth.models import User
 from django.db import transaction
 from django.utils import timezone
 
+from website.queries.display import load_file_display
 from website.constants import EventCode, cache
 from website.core.Serializers import FileSerializer
 from website.core.http.context import RequestContext
@@ -123,7 +124,7 @@ class ThumbnailService:
                 attachment_service.delete_remote_single_discord_attachment(owner, attachment)
         file_obj = File.objects.select_related("parent").get(id=result.file_id)
         send_event(RequestContext.from_user(owner.id), file_obj.parent, EventCode.ITEM_UPDATE,
-                   FileSerializer.serialize_object(file_obj))
+                   FileSerializer.serialize_dict(load_file_display(file_obj.id, file_obj.owner_id)))
 
     @staticmethod
     def _change(principal: UserPrincipal, file_id: str, replacement: dict | None, must_exist: bool, credentials: CredentialSet | None) -> ThumbnailMutationResult:

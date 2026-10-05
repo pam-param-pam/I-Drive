@@ -104,6 +104,8 @@ def get_discord_settings_view(request):
 @permission_classes([IsAuthenticated])
 def create_channel_and_webhook_view(request):
     channel, webhooks = user_service.create_new_channel_and_webhooks(_principal(request))
+    for webhook in webhooks:
+        webhook.channel = channel
     return JsonResponse(WebhookSerializer.serialize_objects(webhooks), safe=False, status=200)
 
 

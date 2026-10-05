@@ -18,6 +18,9 @@ class ResourcePermissionError(IDriveException):
 class BadRequestError(IDriveException):
     """Raised when user's request has some bad/missing data in it"""
 
+class ConcurrentModificationError(IDriveException):
+    """Resource state changed during a command; retry in a fresh transaction."""
+
 class NoBotsError(IDriveException):
     """Raised when user's has no bots and tries to fetch files"""
 

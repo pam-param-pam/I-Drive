@@ -18,26 +18,9 @@ from .principals import SharePrincipal, SignedResourcePrincipal, UserPrincipal
 
 def load_account_facts(owner_id):
     row = UserPerms.objects.filter(user_id=owner_id).values().first()
-    if row is None:
-        raise ResourceNotFoundError()
-    return AccountFacts(owner_id, row["globalLock"], row["admin"], frozenset(
+    return AccountFacts(owner_id, row["globalLock"], row["admin"], set(
         name for name, value in row.items() if value is True and name not in {"globalLock", "admin"}
     ))
-
-
-@dataclass(frozen=True)
-class SelectionItem:
-    type: str
-    id: str
-    owner_id: int
-    parent_id: str | None
-    name: str
-    resource_version: int
-
-
-def selection_items(rows):
-    return tuple(SelectionItem(row["kind"], row["id"], row["owner_id"], row["parent_id"],
-                               row["name"], row["resource_version"]) for row in rows)
 
 
 @dataclass(frozen=True)
@@ -107,6 +90,10 @@ def _policy(principal, action):
     policy = POLICIES[ResourceAction(action)]
     if not isinstance(principal, policy.principals):
         raise ResourcePermissionError("Principal cannot perform this action")
+    if isinstance(principal, SignedResourcePrincipal):
+        expected_kind = "zip" if action == ResourceAction.STREAM_ZIP else "file"
+        if principal.resource_kind != expected_kind:
+            raise ResourcePermissionError("Signed resource cannot perform this action")
     return policy
 
 
@@ -342,12 +329,12 @@ class Authorizer:
             raise TypeError("Signed file access requires a verified signed principal")
 
         checks.check_signed_expiry(principal, timezone.now())
-        owner_id = File.objects.filter(id=principal.file_id).values_list("owner_id", flat=True).first()
+        owner_id = File.objects.filter(id=principal.resource_id).values_list("owner_id", flat=True).first()
         if owner_id is None:
             raise ResourceNotFoundError()
         if principal.share_id is None:
             checks.check_account(owner_id, load_account_facts(owner_id), policy.capabilities)
-        loaded = self._loader.load_many((ResourceRef(ResourceType.FILE, principal.file_id),), owner_id)
+        loaded = self._loader.load_many((ResourceRef(ResourceType.FILE, principal.resource_id),), owner_id)
         _check_rows(policy, loaded, _network(principal, policy, loaded))
         return loaded.resources[0]
 
@@ -355,14 +342,14 @@ class Authorizer:
         policy = _policy(principal, ResourceAction.STREAM_ZIP)
         now = timezone.now()
         checks.check_signed_expiry(principal, now)
-        record = UserZIP.objects.filter(id=principal.zip_id).first()
+        record = UserZIP.objects.filter(id=principal.resource_id).first()
         if record is None:
             raise ResourceNotFoundError()
         loaded = self._loader.load_many(_refs(record.file_ids, record.folder_ids), record.owner_id, projected=True)
         if not loaded.rows:
             raise ResourceNotFoundError()
         scope = ZIPScope(str(record.id), record.owner_id, record.parent_id,
-            frozenset((row["kind"], row["id"]) for row in loaded.rows),
+            set((row["kind"], row["id"]) for row in loaded.rows),
             {row["id"]: loaded.state(row).lock_id for row in loaded.rows if row["kind"] == "folder"}, now)
         for row in loaded.rows:
             checks.check_zip_member(row, loaded.state(row), scope)
@@ -371,7 +358,7 @@ class Authorizer:
 
     def filter_zip_items(self, principal, scope, *, file_ids=None, folder_ids=None, parent_ids=None):
         policy = _policy(principal, ResourceAction.STREAM_ZIP)
-        if principal.zip_id != scope.zip_id:
+        if principal.resource_id != scope.zip_id:
             raise ResourceNotFoundError()
         checks.check_signed_expiry(principal, scope.admitted_at)
         loaded = self._loader.load_many(_refs(file_ids, folder_ids), scope.owner_id, projected=True)

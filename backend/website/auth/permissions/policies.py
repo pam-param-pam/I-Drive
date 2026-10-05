@@ -1,12 +1,10 @@
-"""Fixed compositions of small checks. Callers select actions, never exceptions."""
-
 from dataclasses import dataclass
 from enum import StrEnum
 from types import MappingProxyType
 from typing import Protocol
 
 from . import checks
-from .principals import SharePrincipal, SignedResourcePrincipal, SignedZIPPrincipal, UserPrincipal
+from .principals import SharePrincipal, SignedResourcePrincipal, UserPrincipal
 
 
 class ResourceAction(StrEnum):
@@ -53,7 +51,7 @@ class CredentialCheck(Protocol):
 class Policy:
     principals: tuple[type, ...] = (UserPrincipal,)
     capabilities: tuple[str, ...] = ()
-    resource_types: frozenset[str] = frozenset({"file", "folder"})
+    resource_types: set[str] = frozenset({"file", "folder"})
     checks: tuple[ResourceCheck, ...] = ()
     credential_check: CredentialCheck | None = None
 
@@ -63,8 +61,8 @@ AVAILABLE = LIFECYCLE + (checks.check_outside_trash,)
 OWNER_CHECKS = AVAILABLE + (checks.check_lock_network,)
 OWNER_TRASH = LIFECYCLE + (checks.check_explicit_trash, checks.check_lock_network)
 PASSWORD = checks.lock_challenge
-FILE = frozenset({"file"})
-FOLDER = frozenset({"folder"})
+FILE = {"file"}
+FOLDER = {"folder"}
 
 
 POLICIES = MappingProxyType({
@@ -105,13 +103,10 @@ POLICIES = MappingProxyType({
         resource_types=FILE, checks=LIFECYCLE + (checks.check_no_locked_trash, checks.check_lock_network)),
     ResourceAction.STREAM_ZIP_ENTRY: Policy(principals=(SignedResourcePrincipal,), capabilities=("read", "download"),
         resource_types=FILE, checks=OWNER_CHECKS),
-    ResourceAction.STREAM_ZIP: Policy(principals=(SignedZIPPrincipal,), checks=AVAILABLE),
+    ResourceAction.STREAM_ZIP: Policy(principals=(SignedResourcePrincipal,), checks=AVAILABLE),
     ResourceAction.SEARCH: Policy(capabilities=("read",), checks=OWNER_CHECKS, credential_check=PASSWORD),
     ResourceAction.LIST_TRASH: Policy(capabilities=("read",), checks=LIFECYCLE + (checks.check_explicit_trash,)),
 })
-
-# A parent listing exposes child names, including locked folder names, not content.
-CHILD_METADATA = Policy(checks=AVAILABLE)
 
 if set(POLICIES) != set(ResourceAction):
     raise RuntimeError("Every resource action must have exactly one policy")

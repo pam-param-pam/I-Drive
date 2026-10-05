@@ -69,8 +69,9 @@ def restore_from_trash_view(request):
 def delete_view(request):
     principal, credentials = _inputs(request)
     ids = extract_key(request.data, "ids")
-    namespace_service.request_deletion(principal, ids, credentials)
-    return JsonResponse(build_response(principal.request_id, f"{len(ids)} items are being deleted..."))
+    job = namespace_service.request_deletion(principal, ids, credentials)
+    return JsonResponse({**build_response(principal.request_id, f"{len(ids)} items are being deleted..."),
+                         "job_id": str(job.pk)}, status=202)
 
 
 @api_view(["POST"])

@@ -1,13 +1,14 @@
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from django.contrib.auth.models import User
 from django.db import transaction
 from django.utils import timezone
 
+from website.queries.display import load_folder_display
 from website.config import MAX_FOLDERS_IN_FOLDER, MAX_FOLDER_DEPTH
 from website.constants import EventCode
 from website.core.Serializers import FolderSerializer
 from website.core.http.context import RequestContext
-from website.core.errors import BadRequestError, ResourcePermissionError
+from website.core.errors import BadRequestError, ConcurrentModificationError, ResourcePermissionError
 from website.core.helpers import validate_value
 from website.core.validators.GeneralChecks import IsValidItemName, NotEmpty
 from website.models import (DeletionFolderWorkItem, DeletionScope, Folder, FolderLockScope)
@@ -79,7 +80,7 @@ class FolderService:
             bump_folder_listings([parent.id])
             folder.refresh_from_db(fields=["resource_version"])
             send_event(RequestContext.from_user(owner_id), parent, EventCode.ITEM_CREATE,
-                       FolderSerializer.serialize_object(folder))
+                       FolderSerializer.serialize_dict(load_folder_display(folder.id, folder.owner_id)))
             return FolderCommandResult(str(folder.id), folder.resource_version)
 
     @staticmethod
@@ -101,7 +102,7 @@ class FolderService:
             bump_folder_listings([folder.parent_id])
             folder.refresh_from_db(fields=["resource_version"])
             send_event(RequestContext.from_user(owner_id), hierarchy.folders.get(str(folder.parent_id)), EventCode.ITEM_UPDATE,
-                       FolderSerializer.serialize_object(Folder.objects.get(id=folder.id)))
+                       FolderSerializer.serialize_dict(load_folder_display(folder.id, owner_id)))
             return FolderCommandResult(str(folder.id), folder.resource_version)
 
     @staticmethod
@@ -173,7 +174,7 @@ class FolderService:
         send_event(RequestContext.from_user(owner_id), hierarchy.folders[old_parent_id], EventCode.ITEM_MOVE_OUT,
                    [str(folder.id)])
         send_event(RequestContext.from_user(owner_id), destination, EventCode.ITEM_MOVE_IN,
-                   FolderSerializer.serialize_object(Folder.objects.get(id=folder.id)))
+                   FolderSerializer.serialize_dict(load_folder_display(folder.id, owner_id)))
         return FolderCommandResult(str(folder.id), folder.resource_version)
 
     @staticmethod
@@ -211,7 +212,7 @@ class FolderService:
         bump_folder_listings([folder.parent_id])
         folder.refresh_from_db(fields=["resource_version"])
         send_event(RequestContext.from_user(owner_id), hierarchy.folders.get(str(folder.parent_id)),
-                   EventCode.ITEM_MOVE_TO_TRASH, FolderSerializer.serialize_object(folder))
+                   EventCode.ITEM_MOVE_TO_TRASH, FolderSerializer.serialize_dict(load_folder_display(folder.id, folder.owner_id)))
         return FolderCommandResult(str(folder.id), folder.resource_version)
 
     @staticmethod
@@ -234,7 +235,7 @@ class FolderService:
         deleted = Folder.objects.filter(id=folder.id, owner_id=owner_id, trashed_at__isnull=False).update(trashed_at=None)
         folder.trashed_at = None
         if not deleted:
-            raise BadRequestError("Trash state changed during restore")
+            raise ConcurrentModificationError("Trash state changed during restore; retry the request")
         outside = hierarchy.chain(str(folder.id))[1:]
         deltas: dict[str, dict[str, int]] = {}
         merge_delta(
@@ -250,7 +251,7 @@ class FolderService:
         bump_folder_listings([folder.parent_id])
         folder.refresh_from_db(fields=["resource_version"])
         send_event(RequestContext.from_user(owner_id), hierarchy.folders.get(str(folder.parent_id)),
-                   EventCode.ITEM_RESTORE_FROM_TRASH, FolderSerializer.serialize_object(folder))
+                   EventCode.ITEM_RESTORE_FROM_TRASH, FolderSerializer.serialize_dict(load_folder_display(folder.id, folder.owner_id)))
         return FolderCommandResult(str(folder.id), folder.resource_version)
 
     @staticmethod
@@ -354,6 +355,7 @@ class FolderService:
             scope = DeletionScope.objects.create(
                 owner_id=owner_id,
                 root_folder_id=folder.id,
+                request_context=asdict(principal),
                 physical_folder_count=1 + folder.physical_descendant_folder_count,
                 physical_file_count=folder.physical_descendant_file_count,
                 physical_file_size=folder.physical_descendant_file_size,
@@ -362,6 +364,8 @@ class FolderService:
                 visible_file_size=folder.visible_descendant_file_size if visible else 0,
             )
             DeletionFolderWorkItem.objects.create(scope=scope, folder_id=folder.id)
+            from website.tasks.deletion.workflow import publish_deletion_scope
+            transaction.on_commit(lambda: publish_deletion_scope(scope.pk), robust=True)
             Folder.objects.filter(id=folder.id).update(state=ItemState.DELETING, state_changed_at=timezone.now())
 
             outside = hierarchy.chain(str(folder.id))[1:]

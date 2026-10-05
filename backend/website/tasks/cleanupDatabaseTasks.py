@@ -9,7 +9,7 @@ from website.core.http.context import RequestContext
 from website.models import File, ShareableLink, PerDeviceToken, Folder
 from website.models.mixin_models import ItemState
 from website.models.other_models import Notification, UserZIP, RawExtractionClaim, NotificationType, NotificationKind
-from website.services import item_service, user_service
+from website.services import user_service
 from website.tasks.helper import format_cleanup_summary
 from website.tasks.raw_image.workflow import handle_parse_failure
 
@@ -60,7 +60,7 @@ def cleanup_trash(user) -> int:
 
     if items:
         ctx = RequestContext.from_user(user.id)
-        item_service.delete_items(ctx, user, items)
+        #todo
 
     return len(items)
 

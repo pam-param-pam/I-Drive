@@ -1,10 +1,12 @@
+import math
 import re
+from dataclasses import dataclass
 from datetime import datetime, timedelta
-from typing import Optional
 
-from django.core.exceptions import BadRequest
+from django.utils import timezone
 from django.db.models.query_utils import Q
 
+from website.queries.display import load_file_displays, load_folder_displays
 from website.core.Serializers import FileSerializer, FolderSerializer
 from website.core.errors import BadRequestError
 from website.core.helpers import validate_key, validate_ids_as_list
@@ -16,70 +18,81 @@ from website.auth.permissions import (
 from website.auth.permissions.authorizer import authorizer
 
 
-def validate_filter(f: Optional[dict]) -> Optional[dict]:
-    ALLOWED_OPS = {
-        "string": {"regex"},
-        "number": {"between", "lt", "gt"},
-        "date": {"between", "lt", "gt"},
-    }
+_FILTER_FIELDS = {
+    "name": "string", "extension": "string", "size": "number",
+    "created_at": "date", "last_modified_at": "date",
+}
+_FILTER_OPERATORS = {
+    "string": {"regex"}, "number": {"between", "lt", "gt"},
+    "date": {"between", "lt", "gt"},
+}
 
-    ALLOWED_FIELDS = {
-        "name": "string",
-        "extension": "string",
-        "size": "number",
-        "created_at": "date",
-        "last_modified_at": "date",
-    }
 
-    if f is None:
+@dataclass(frozen=True)
+class SearchFilter:
+    field: str
+    op: str
+    value: str | float | datetime | tuple[float, float] | tuple[datetime, datetime]
+
+
+def _normalize_filter_value(value, field_type: str):
+    if field_type == "date":
+        if not isinstance(value, str):
+            raise BadRequestError("Date filters require YYYY-MM-DD strings")
+        try:
+            parsed = datetime.strptime(value, "%Y-%m-%d")
+        except ValueError as exception:
+            raise BadRequestError("Invalid date format") from exception
+        return timezone.make_aware(parsed, timezone.get_current_timezone())
+    if isinstance(value, bool) or not isinstance(value, (int, float, str)):
+        raise BadRequestError("Invalid numeric value")
+    try:
+        number = float(value)
+    except (ValueError, OverflowError) as exception:
+        raise BadRequestError("Invalid numeric value") from exception
+    if not math.isfinite(number):
+        raise BadRequestError("Numeric filters require finite values")
+    return number
+
+
+def validate_filter(raw: dict | None) -> SearchFilter | None:
+    """Validate and normalize once, before comparing bounds or building SQL."""
+    if raw is None:
         return None
-
-    if not isinstance(f, dict):
-        raise BadRequestError("Filter must be an object.")
-
-    field = f.get("field")
-    op = f.get("op")
-    value = f.get("value")
-
-    if field not in ALLOWED_FIELDS:
+    if not isinstance(raw, dict):
+        raise BadRequestError("Filter must be an object")
+    field, op, value = raw.get("field"), raw.get("op"), raw.get("value")
+    if not isinstance(field, str) or field not in _FILTER_FIELDS:
         raise BadRequestError(f"Invalid filter field: {field}")
-
-    field_type = ALLOWED_FIELDS[field]
-
-    if op not in ALLOWED_OPS[field_type]:
+    field_type = _FILTER_FIELDS[field]
+    if not isinstance(op, str) or op not in _FILTER_OPERATORS[field_type]:
         raise BadRequestError(f"Invalid operator '{op}' for field '{field}'")
-
     if field_type == "string":
         if not isinstance(value, str) or not value:
             raise BadRequestError("String filter requires non-empty string value")
-
-        # optional: safe regex check
         if len(value) > 50:
             raise BadRequestError("Regex too long")
+        try:
+            re.compile(value)
+        except re.error as exception:
+            raise BadRequestError("Invalid regex") from exception
+    elif op == "between":
+        if not isinstance(value, dict) or "from" not in value or "to" not in value:
+            raise BadRequestError("Between requires both 'from' and 'to'")
+        start = _normalize_filter_value(value["from"], field_type)
+        end = _normalize_filter_value(value["to"], field_type)
+        if start > end:
+            raise BadRequestError("'from' cannot be greater than 'to'")
+        if field_type == "date":
+            try:
+                end += timedelta(days=1)
+            except OverflowError as exception:
+                raise BadRequestError("Date range end is too large") from exception
+        value = (start, end)
+    else:
+        value = _normalize_filter_value(value, field_type)
+    return SearchFilter(field, op, value)
 
-    elif field_type in ("number", "date"):
-        if op in ("lt", "gt"):
-            if not isinstance(value, (int, float, str)):
-                raise BadRequestError("Invalid value for comparison filter")
-
-        elif op == "between":
-            if not isinstance(value, dict):
-                raise BadRequestError("Between filter requires object value")
-
-            if "from" not in value or "to" not in value:
-                raise BadRequestError("Between requires both 'from' and 'to'")
-
-            if value["from"] is None or value["to"] is None:
-                raise BadRequestError("Between values cannot be null")
-
-            if value["from"] > value["to"]:
-                raise BadRequestError("'from' cannot be greater than 'to'")
-
-    return {
-        "field": field,
-        "op": op,
-        "value": value,
-    }
 
 def validate_search_request(data: dict) -> dict:
     out = {}
@@ -148,7 +161,7 @@ def validate_search_request(data: dict) -> dict:
         bool(out["type"])
     )
 
-    filter_field = out["filter"]["field"] if out["filter"] else None
+    filter_field = out["filter"].field if out["filter"] else None
     filter_is_file_only = filter_field in {"size", "extension"}
 
     if (file_specific or filter_is_file_only) and out["folders"]:
@@ -156,110 +169,17 @@ def validate_search_request(data: dict) -> dict:
 
     return out
 
-def build_attr_filter(filter_obj):
-    if not filter_obj:
+def build_attr_filter(filter_obj: SearchFilter | None) -> Q | None:
+    """Compile a normalized filter; raw input validation belongs above."""
+    if filter_obj is None:
         return None
+    if filter_obj.op == "between":
+        start, end = filter_obj.value
+        if isinstance(start, datetime):
+            return Q(**{f"{filter_obj.field}__gte": start, f"{filter_obj.field}__lt": end})
+        return Q(**{f"{filter_obj.field}__range": (start, end)})
+    return Q(**{f"{filter_obj.field}__{filter_obj.op}": filter_obj.value})
 
-    field = filter_obj.get("field")
-    op = filter_obj.get("op")
-    value = filter_obj.get("value")
-
-    # -------------------------
-    # whitelist fields
-    # -------------------------
-    FIELD_TYPES = {
-        "name": "string",
-        "extension": "string",
-        "size": "number",
-        "created_at": "date",
-        "last_modified_at": "date",
-    }
-
-    if field not in FIELD_TYPES:
-        raise BadRequest(f"Invalid filter field: {field}")
-
-    field_type = FIELD_TYPES[field]
-
-    # -------------------------
-    # operator validation
-    # -------------------------
-    if field_type == "string":
-        if op != "regex":
-            raise BadRequest("String fields only support 'regex'")
-    else:
-        if op not in ("between", "lt", "gt"):
-            raise BadRequest(f"Invalid op '{op}' for {field}")
-
-    # -------------------------
-    # build Q
-    # -------------------------
-    if field_type == "string":
-        if not isinstance(value, str) or not value:
-            raise BadRequest("Regex must be non-empty string")
-
-        try:
-            re.compile(value)
-        except re.error:
-            raise BadRequest("Invalid regex")
-
-        return Q(**{f"{field}__regex": value})
-
-    # -------------------------
-    # number / date
-    # -------------------------
-    if op in ("lt", "gt"):
-        if value is None:
-            raise BadRequest("Value required")
-
-        if field_type == "date":
-            try:
-                value = datetime.strptime(value, "%Y-%m-%d")
-            except Exception:
-                raise BadRequest("Invalid date format")
-        else:
-            try:
-                value = float(value)
-            except Exception:
-                raise BadRequest("Invalid numeric value")
-
-        lookup = "lt" if op == "lt" else "gt"
-        return Q(**{f"{field}__{lookup}": value})
-
-    if op == "between":
-        if not isinstance(value, dict):
-            raise BadRequest("Between requires dict")
-
-        v_from = value.get("from")
-        v_to = value.get("to")
-
-        if v_from is None or v_to is None:
-            raise BadRequest("Between requires both from/to")
-
-        if field_type == "date":
-            try:
-                start = datetime.strptime(v_from, "%Y-%m-%d")
-                end = datetime.strptime(v_to, "%Y-%m-%d")
-            except Exception:
-                raise BadRequest("Invalid date format")
-
-            if start > end:
-                raise BadRequest("from > to")
-
-            return Q(**{f"{field}__gte": start}) & Q(**{f"{field}__lt": end + timedelta(days=1)})
-
-        else:
-            try:
-                start = float(v_from)
-                end = float(v_to)
-            except Exception:
-                raise BadRequest("Invalid numeric range")
-
-            if start > end:
-                raise BadRequest("from > to")
-
-            return Q(**{f"{field}__range": (start, end)})
-
-    return None
 
 def perform_search(principal: UserPrincipal, data: dict, credentials: CredentialSet | None = None):
     validated = validate_search_request(data)
@@ -318,7 +238,7 @@ def perform_search(principal: UserPrincipal, data: dict, credentials: Credential
             file_q &= attr_filter
 
         # folders only get safe subset
-        if include_folders and validated["filter"]["field"] in {"name", "created_at", "last_modified_at"}:
+        if include_folders and validated["filter"].field in {"name", "created_at", "last_modified_at"}:
             folder_q &= attr_filter
 
     # ------------------------
@@ -350,7 +270,7 @@ def perform_search(principal: UserPrincipal, data: dict, credentials: Credential
             .order_by(f"{order_prefix}{order_by}")
             [:result_limit]
         )
-        result.extend(FileSerializer.serialize_many(files))
+        result.extend(FileSerializer.serialize_many(load_file_displays(files)))
 
     if include_folders and authorized_folders:
         folders = (
@@ -358,6 +278,6 @@ def perform_search(principal: UserPrincipal, data: dict, credentials: Credential
             .select_related("parent")
             .order_by(f"{order_prefix}{order_by}")[:result_limit]
         )
-        result.extend(FolderSerializer.serialize_object(folder) for folder in folders)
+        result.extend(FolderSerializer.serialize_many(load_folder_displays(folders)))
 
     return result

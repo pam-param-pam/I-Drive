@@ -1,5 +1,5 @@
 from collections import defaultdict
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from typing import Iterable, Type
 
 from django.contrib.auth.models import User
@@ -7,12 +7,13 @@ from django.db import transaction
 from django.db.models import F
 from django.utils import timezone
 
+from website.queries.display import load_file_display, load_file_displays
 from website.config import MAX_FILES_IN_FOLDER
 from website.constants import EventCode, MAX_DISCORD_MESSAGE_SIZE
 from website.core.Serializers import FileSerializer
 from website.core.http.context import RequestContext
 from website.core.converters import chop_long_file_name, parse_unix_milliseconds
-from website.core.errors import BadRequestError, ResourceNotFoundError
+from website.core.errors import BadRequestError, ConcurrentModificationError, ResourceNotFoundError
 from website.core.helpers import (
     get_file_extension, get_file_type, validate_crc,
     validate_encryption_fields, validate_ids_as_list, validate_key,
@@ -21,7 +22,7 @@ from website.core.validators.GeneralChecks import (
     IsPositive, IsSnowflake, IsValidItemName, Max, MaxLength, NotEmpty,
     NotNegative)
 from website.models import (
-    AudioTrack, DeletionScope, File, Fragment, MediaPosition,
+    AudioTrack, File, Fragment, MediaPosition,
     Moment, Subtitle, SubtitleTrack, Tag, VideoMetadata,
     VideoMetadataTrackMixin, VideoTrack)
 from website.models.file_related_models import PhotoMetadata, RawMetadata
@@ -83,7 +84,7 @@ def lock_files_with_parents(
 
     files = {str(file_obj.id): file_obj for file_obj in file_objects}
     if any(str(file_obj.parent_id) != snapshot[str(file_obj.id)] for file_obj in file_objects):
-        raise BadRequestError("File hierarchy changed concurrently; retry the request")
+        raise ConcurrentModificationError("File hierarchy changed concurrently; retry the request")
     return LockedFiles(files, hierarchy)
 
 
@@ -198,7 +199,7 @@ def _change_trash_state_locked(owner_id, locked, restore):
     updated = files.update(trashed_at=None if restore else now, last_modified_at=now,
                            resource_version=F("resource_version") + 1)
     if updated != len(locked.files):
-        raise BadRequestError("File selection changed during the command")
+        raise ConcurrentModificationError("File selection changed during the command; retry the request")
 
     apply_counter_deltas(deltas)
     dirty_hashes(dirty_ids)
@@ -413,7 +414,7 @@ class FileService:
                 updated = File.objects.select_related("parent").get(id=file_id)
                 send_event(
                     RequestContext.from_user(owner_id), updated.parent,
-                    EventCode.ITEM_UPDATE, FileSerializer.serialize_object(updated),
+                    EventCode.ITEM_UPDATE, FileSerializer.serialize_dict(load_file_display(updated.id, updated.owner_id)),
                 )
 
             transaction.on_commit(lambda: thumbnail_service._cleanup_committed_cache(file_id), robust=True)
@@ -504,7 +505,7 @@ class FileService:
             dirty_hashes(chain)
             bump_folder_listings([parent.id])
             send_event(RequestContext.from_user(owner_id), parent, EventCode.ITEM_CREATE,
-                       FileSerializer.serialize_object(file_obj))
+                       FileSerializer.serialize_dict(load_file_display(file_obj.id, file_obj.owner_id)))
             return FileCreateResult(str(file_obj.id), file_obj.resource_version, True)
 
     @staticmethod
@@ -629,7 +630,7 @@ class FileService:
             file_obj.refresh_from_db(fields=["resource_version"])
             result = FileCommandResult(str(file_obj.id), file_obj.resource_version)
             send_event(RequestContext.from_user(owner_id), locked.hierarchy.folders[str(file_obj.parent_id)],
-                       EventCode.ITEM_UPDATE, FileSerializer.serialize_object(file_obj))
+                       EventCode.ITEM_UPDATE, FileSerializer.serialize_dict(load_file_display(file_obj.id, file_obj.owner_id)))
 
         user = User.objects.get(id=owner_id)
         _delete_removed_attachments(user, removed)
@@ -660,7 +661,7 @@ class FileService:
             bump_folder_listings([file_obj.parent_id])
             file_obj.refresh_from_db(fields=["resource_version"])
             send_event(RequestContext.from_user(owner_id), locked.hierarchy.folders[str(file_obj.parent_id)],
-                       EventCode.ITEM_UPDATE, FileSerializer.serialize_object(file_obj))
+                       EventCode.ITEM_UPDATE, FileSerializer.serialize_dict(load_file_display(file_obj.id, file_obj.owner_id)))
             return FileCommandResult(str(file_obj.id), file_obj.resource_version)
 
     @staticmethod
@@ -687,7 +688,7 @@ class FileService:
             bump_folder_listings([file_obj.parent_id])
             file_obj.refresh_from_db(fields=["resource_version"])
             send_event(RequestContext.from_user(owner_id), locked.hierarchy.folders[str(file_obj.parent_id)],
-                       EventCode.ITEM_UPDATE, FileSerializer.serialize_object(file_obj))
+                       EventCode.ITEM_UPDATE, FileSerializer.serialize_dict(load_file_display(file_obj.id, file_obj.owner_id)))
             return FileCommandResult(str(file_obj.id), file_obj.resource_version)
 
     @staticmethod
@@ -763,7 +764,7 @@ class FileService:
                     file_obj.parent = destination
                     file_obj.resource_version += 1
                 send_event(RequestContext.from_user(owner_id), destination, EventCode.ITEM_MOVE_IN,
-                           FileSerializer.serialize_many(batch))
+                           FileSerializer.serialize_many(load_file_displays(batch)))
         refreshed = File.objects.filter(id__in=locked.files).values_list("id", "resource_version")
         return [FileCommandResult(str(file_id), version) for file_id, version in refreshed]
 
@@ -785,35 +786,14 @@ class FileService:
                 principal, ResourceAction.REQUEST_DELETE, file_ids=file_ids,
                 credentials=credentials, locked_hierarchy=locked.hierarchy, locked_files=locked.files,
             )
-            deltas: dict[str, dict[str, int]] = {}
-            dirty_ids: set[str] = set()
-            parent_ids: set[str] = set()
-            results: list[FileCommandResult] = []
-            now = timezone.now()
-            for file_obj in locked.files.values():
-                # REQUEST_DELETE already rejects inherited trash.
-                visible = file_obj.trashed_at is None
-                scope = DeletionScope.objects.create(
-                    owner_id=owner_id,
-                    root_file_id=file_obj.id,
-                    physical_file_count=1,
-                    physical_file_size=file_obj.size,
-                    visible_file_count=1 if visible else 0,
-                    visible_file_size=file_obj.size if visible else 0,
-                )
-                if visible:
-                    chain = locked.hierarchy.chain(str(file_obj.parent_id))
-                    dirty_ids.update(chain)
-                    merge_delta(deltas, chain, visible_descendant_file_count=-1, visible_descendant_file_size=-file_obj.size)
-                parent_ids.add(str(file_obj.parent_id))
-                results.append(FileCommandResult(str(file_obj.id), file_obj.resource_version + 1, str(scope.id)))
+            from website.services.deletion_service import admit_file_deletions
 
-            File.objects.filter(id__in=locked.files).update(state=ItemState.DELETING, state_changed_at=now)
-            apply_counter_deltas(deltas)
-            dirty_hashes(dirty_ids)
-            bump_file_resources(locked.files)
-            bump_folder_listings(parent_ids)
-            send_event(RequestContext.from_user(owner_id), None, EventCode.ITEM_DELETE, list(locked.files))
+            scopes = admit_file_deletions(owner_id, locked, request_context=asdict(principal))
+            results = [
+                FileCommandResult(file_id, locked.files[file_id].resource_version + 1, str(scope.id))
+                for file_id, scope in scopes.items()
+            ]
+            send_event(RequestContext.from_user(owner_id), None, EventCode.ITEM_DELETE, list(scopes))
             return results
 
     @staticmethod

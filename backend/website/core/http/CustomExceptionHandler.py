@@ -14,7 +14,7 @@ from rest_framework.views import exception_handler
 
 from website.core.errors import IDriveException, BadRequestError, NoBotsError, LockedFolderWrongIpError, ResourcePermissionError, RootPermissionError, URLInvalidOrExpired, \
     ResourceNotFoundError, UsernameTakenError, RangeNotSatisfiable, PermissionPasswordError, CannotProcessDiscordRequestError, MalformedDatabaseState, DiscordBlockError, \
-    DiscordError, DiscordTextError, NoAvailableDiscordCredentialError
+    DiscordError, DiscordTextError, NoAvailableDiscordCredentialError, ConcurrentModificationError
 from website.core.helpers import format_wait_time
 from website.core.http.utils import build_http_error_response
 from website.models import ShareableLink
@@ -79,6 +79,9 @@ def custom_exception_handler(exception, context):
         return JsonResponse(build_http_error_response(code=404, error="errors.resourceNotFound", details=str(exception)), status=404)
 
     # 409 CONFLICT
+    elif isinstance(exception, ConcurrentModificationError):
+        return JsonResponse(build_http_error_response(code=409, error="errors.concurrentModification", details=str(exception)), status=409)
+
     elif isinstance(exception, UsernameTakenError):
         return JsonResponse(build_http_error_response(code=409, error="errors.usernameTakenError", details=""), status=409)
 
