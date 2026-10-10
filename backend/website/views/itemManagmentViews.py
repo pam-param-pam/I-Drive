@@ -25,8 +25,8 @@ def create_folder_view(request):
     principal, credentials = _inputs(request)
     parent_id = str(extract_key(request.data, "parent_id"))
     name = extract_key(request.data, "name")
-    result = FolderService.create(principal, parent_id, name, credentials)
-    return JsonResponse({"id": result.folder_id, "resource_version": result.resource_version}, status=200)
+    FolderService.create(principal, parent_id, name, credentials)
+    return HttpResponse(status=200)
 
 
 @api_view(["PATCH"])

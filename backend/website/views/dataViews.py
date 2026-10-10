@@ -6,7 +6,6 @@ import json
 import time
 
 from django.http import JsonResponse, HttpResponse, HttpResponseNotModified
-from django.views.decorators.cache import cache_page
 from django.views.decorators.vary import vary_on_headers
 from rest_framework.decorators import permission_classes, throttle_classes, api_view
 from rest_framework.permissions import IsAuthenticated
@@ -355,7 +354,6 @@ def get_fragment_url_view(request, fragment_id):
 @api_view(['GET'])
 @throttle_classes([defaultAuthUserThrottle])
 @permission_classes([IsAuthenticated])
-@cache_page(60 * 1)
 def get_folder_file_stats(request, folder_id):
     principal, credentials = _inputs(request)
     folder = authorizer.require_item(principal, ResourceAction.READ, folder_id, credentials,

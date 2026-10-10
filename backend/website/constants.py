@@ -11,7 +11,7 @@ DISCORD_BASE_URL = "https://discord.com/api/v10"
 MAX_ATTACHMENTS_PER_MESSAGE = 10
 
 # Max size of 1 discord message
-MAX_DISCORD_MESSAGE_SIZE = 10 * 1023 * 1024
+MAX_DISCORD_MESSAGE_SIZE = 20 * 1023 * 1024
 
 # Max age of media cache in seconds: 1 month
 MAX_MEDIA_CACHE_AGE = 2628000

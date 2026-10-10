@@ -8,6 +8,7 @@ from website.models import File, Folder, ShareableLink, ShareAccessEvent, ShareA
     PerDeviceToken, UserZIP
 from website.models.file_related_models import PhotoMetadata, RawMetadata, SubtitleTrack, Moment
 from website.models.other_models import Notification
+from website.queries.display import FILE_DISPLAY_FIELDS
 
 
 def _loaded_relation(obj, field: str):
@@ -75,7 +76,7 @@ class FileSerializer:
 
     @classmethod
     def serialize_dict(cls, row: dict, hide=False, sign_urls: bool = True) -> dict:
-        return cls.serialize_tuple(tuple(row[field] for field in File.DISPLAY_VALUES), hide, sign_urls)
+        return cls.serialize_tuple(tuple(row[field] for field in FILE_DISPLAY_FIELDS), hide, sign_urls)
 
     @classmethod
     def serialize_many(cls, rows: Iterable[dict], hide=False, sign_urls: bool = True) -> list[dict]:

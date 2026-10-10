@@ -109,14 +109,6 @@ class File(models.Model):
             )
         ]
 
-    MINIMAL_VALUES = ("id", "name", "in_trash", "state", "parent_id", "owner_id", "is_locked", "lock_from_id", "lock_from_name", "is_dir")
-
-    STANDARD_VALUES = MINIMAL_VALUES + ("type", )
-    DISPLAY_VALUES = STANDARD_VALUES + (
-        "size", "created_at", "last_modified_at", "encryption_method", "in_trash_since", "extension",
-        "parent_id", "crc", "subs_count", "has_photo_metadata", "has_raw_metadata", "thumbnail_cache_id", "has_video_metadata", "iv", "key"
-    )
-
     @classmethod
     def get_display_annotate(cls):
         return {

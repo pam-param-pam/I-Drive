@@ -24,6 +24,23 @@ def load_account_facts(owner_id):
 
 
 @dataclass(frozen=True)
+class SelectionItem:
+    type: str
+    id: str
+    owner_id: int
+    parent_id: str | None
+    name: str
+    resource_version: int
+
+
+def selection_items(rows):
+    return tuple(SelectionItem(
+        row["kind"], row["id"], row["owner_id"], row["parent_id"],
+        row["name"], row["resource_version"],
+    ) for row in rows)
+
+
+@dataclass(frozen=True)
 class ShareResolution:
     share: ShareableLink
     root: object
