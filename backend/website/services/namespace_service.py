@@ -9,7 +9,7 @@ from website.auth.permissions import (
 from website.core.errors import BadRequestError, ResourceNotFoundError
 from website.core.helpers import validate_ids_as_list
 from website.models import File, Folder, NamespaceOperation, DeletionJob
-from website.queries.hierarchy import get_descendant_folder_ids, load_folder_hierarchy
+from website.queries.hierarchy import get_descendant_folder_ids
 from website.auth.permissions import ResourceType
 from website.services.file_service import FileService
 from website.services.folder_service import FolderService
@@ -121,39 +121,35 @@ def _submit_operation(principal, item_ids, action, credentials, destination_id=N
 
 
 def request_deletion(principal: UserPrincipal, item_ids: list[str], credentials: CredentialSet):
+    from website.tasks.deletion.scheduling import schedule_deletion_job
+
     with transaction.atomic():
         namespace_lock_service.lock_owner_scope_exclusive(principal.user_id)
         validate_ids_as_list(item_ids, max_length=10000, child_type=str)
-        existing = DeletionJob.objects.filter(requested_by_id=principal.user_id,
-            state__in=[DeletionJob.State.PENDING, DeletionJob.State.PLANNING, DeletionJob.State.RUNNING]).first()
-        if existing:
-            if (principal.request_id and existing.request_context.get("request_id") == principal.request_id
-                    and sorted(existing.requested_ids) == sorted(item_ids)):
+        if principal.request_id:
+            existing = DeletionJob.objects.filter(
+                requested_by_id=principal.user_id,
+                request_context__request_id=principal.request_id,
+            ).first()
+            if existing:
+                if sorted(existing.requested_ids) != sorted(item_ids):
+                    raise BadRequestError("Request ID already belongs to another deletion job")
                 return existing
-            raise BadRequestError("A deletion request is already in progress")
-        refs = classify_item_ids(principal, item_ids)
-        # Authorize every requested item before normalization or recording work.
-        authorized = permissions.authorize(ResourceAction.REQUEST_DELETE, principal,
-            file_ids=[ref.id for ref in refs if ref.type == "file"],
-            folder_ids=[ref.id for ref in refs if ref.type == "folder"], credentials=credentials)
-        items = tuple(item.resource for item in authorized.items)
-        selected_folders = {str(item.pk) for item in items if isinstance(item, Folder)}
-        _, chains = load_folder_hierarchy({str(item.pk) if isinstance(item, Folder)
-                                          else str(item.parent_id) for item in items})
-        normalized = [item for item in items if not selected_folders.intersection(
-            chains[str(item.pk)][1:] if isinstance(item, Folder) else chains[str(item.parent_id)])]
+        authorized = permissions.authorize(ResourceAction.REQUEST_DELETE, principal, item_ids, credentials)
+        file_ids = [item.row["id"] for item in authorized.items if item.row["kind"] == "file"]
+        folder_ids = [item.row["id"] for item in authorized.items if item.row["kind"] == "folder"]
+        folder_roots = list(Folder.objects.filter(owner_id=principal.user_id, id__in=folder_ids))
         job = DeletionJob.objects.create(requested_by_id=principal.user_id, request_context=asdict(principal),
-            requested_ids=item_ids, state=DeletionJob.State.RUNNING)
-        file_ids = [str(item.pk) for item in normalized if isinstance(item, File)]
-        folder_roots = [item for item in normalized if isinstance(item, Folder)]
+            requested_ids=item_ids, state=DeletionJob.State.PENDING)
         job.total_file_items = len(file_ids) + sum(folder.physical_descendant_file_count for folder in folder_roots)
         job.total_folder_items = sum(1 + folder.physical_descendant_folder_count for folder in folder_roots)
-        job.started_at = job.heartbeat_at = timezone.now()
-        job.save(update_fields=["total_file_items", "total_folder_items", "started_at", "heartbeat_at"])
+        job.heartbeat_at = timezone.now()
+        job.save(update_fields=["total_file_items", "total_folder_items", "heartbeat_at"])
         if file_ids:
             FileService.request_deletion(principal, file_ids, credentials, job=job)
         for folder in folder_roots:
             FolderService.request_deletion(principal, str(folder.pk), credentials, job=job)
+        transaction.on_commit(lambda: schedule_deletion_job.delay(str(job.pk)), robust=True)
         return job
 
 

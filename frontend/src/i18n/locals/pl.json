@@ -589,6 +589,7 @@
     "itemMovedToTrash": "Przenesiono {amount} itemy do kosza",
     "itemRenamed": "Nazwa zmieniona",
     "itemsAreBeingDeleted": "Usuwanie...",
+    "deletingItemsProgress": "Usuwanie elementów {percentage}%...",
     "itemsAreBeingMoved": "Przenoszenie itemów {percentage}%...",
     "movingItemsToTrash": "Przenoszenie elementów do kosza {percentage}%...",
     "restoringItems": "Przywracanie elementów {percentage}%...",

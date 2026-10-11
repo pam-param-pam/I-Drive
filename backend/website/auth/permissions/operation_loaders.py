@@ -185,15 +185,7 @@ def zip_items_loader(context, root_facts, item_facts, resources) -> AccessContex
     return replace(context, items=as_items(loaded), data={**context.data, "scope": scope})
 
 
-def download_root_loader(context, root_facts, item_facts, resources) -> AccessContext:
-    request = context.request
-    item_id = extract_key(request.params, "item_id")
-    validate_ids_as_list([item_id], max_length=1, child_type=str)
-    loaded = resources.load_selection(request.principal.user_id, [item_id], facts=item_facts)
-    return replace(context, items=as_items(loaded))
-
-
-def download_items_loader(context, root_facts, item_facts, resources) -> AccessContext:
+def download_children_root_loader(context, root_facts, item_facts, resources) -> AccessContext:
     request = context.request
     root_id = extract_key(request.params, "root_id")
     root = resources.load_many((ResourceRef(ResourceType.FOLDER, root_id),), request.principal.user_id,
@@ -201,7 +193,7 @@ def download_items_loader(context, root_facts, item_facts, resources) -> AccessC
     return replace(context, root=as_items(root))
 
 
-def download_candidates_loader(context, root_facts, item_facts, resources) -> AccessContext:
+def download_children_loader(context, root_facts, item_facts, resources) -> AccessContext:
     request = context.request
     candidates = resources.load_many(_refs(request.get("file_ids"), request.get("folder_ids")),
                                      request.principal.user_id, projected=True, facts=item_facts)

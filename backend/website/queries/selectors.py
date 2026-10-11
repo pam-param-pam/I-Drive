@@ -1,8 +1,7 @@
 from django.db.models import Q
 
 from website.core.errors import BadRequestError, NoBotsError
-from website.models import Bot, Webhook, Channel, DiscordAttachmentMixin
-from website.safety.helper import get_classes_extending_discordAttachmentMixin
+from website.models import Bot, Webhook, Channel, DiscordAttachmentMixin, DISCORD_ATTACHMENT_MODELS
 
 
 def get_discord_author(user, message_author_id: str) -> Webhook:
@@ -24,9 +23,6 @@ def check_if_bots_exists(user) -> int:
     if bots_count == 0:
         raise NoBotsError()
     return bots_count
-
-
-DiscordAttachmentClasses = get_classes_extending_discordAttachmentMixin()
 
 
 def query_attachments(channel_id=None, message_id=None, attachment_id=None, author_id=None, owner=None, message_keys=None) -> list[DiscordAttachmentMixin]:
@@ -55,7 +51,7 @@ def query_attachments(channel_id=None, message_id=None, attachment_id=None, auth
 
     # Query each model and filter based on the query
     combined_results = []
-    for cls in DiscordAttachmentClasses:
+    for cls in DISCORD_ATTACHMENT_MODELS:
         combined_results.extend(cls.objects.filter(query).select_related("file", "channel", "author"))
 
     return combined_results

@@ -15,6 +15,7 @@ from local_common import (
     stop_process_tree,
     wait_for_compose_services,
     wait_for_processes,
+    watch_instance_lock,
 )
 
 
@@ -22,7 +23,8 @@ INSTANCE_LOCK_ADDRESS = ("127.0.0.1", 49175)
 INFRASTRUCTURE_SERVICES = ("redis", "postgres", "prometheus", "grafana")
 
 def main() -> int:
-    instance_lock = acquire_instance_lock(INSTANCE_LOCK_ADDRESS)
+    instance_lock = acquire_instance_lock(INSTANCE_LOCK_ADDRESS, "celery")
+    stop_requested = watch_instance_lock(instance_lock, "celery")
     processes: list[subprocess.Popen] = []
     try:
         env = load_project_environment()
@@ -46,7 +48,7 @@ def main() -> int:
             start(command, cwd=BACKEND_DIR, env=backend_env)
             for command in commands
         ]
-        return wait_for_processes(processes)
+        return wait_for_processes(processes, stop_requested)
     except KeyboardInterrupt:
         return 0
     finally:

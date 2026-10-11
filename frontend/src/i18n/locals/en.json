@@ -588,6 +588,7 @@
     "itemMovedToTrash": "Moved {amount} items to trash",
     "itemRenamed": "Name changed",
     "itemsAreBeingDeleted": "Deleting...",
+    "deletingItemsProgress": "Deleting items {percentage}%...",
     "itemsAreBeingMoved": "Moving items {percentage}%...",
     "movingItemsToTrash": "Moving items to Trash {percentage}%...",
     "restoringItems": "Restoring items {percentage}%...",

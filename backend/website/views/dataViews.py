@@ -1,5 +1,5 @@
 from website.queries.display import load_file_display, load_folder_display, load_folder_displays
-from website.services.media_service import iter_download_files
+from website.services.media_service import list_download_folder_children
 import base64
 import hashlib
 import json
@@ -28,6 +28,7 @@ from website.services import search_service
 from website.auth.permissions.engine import permissions
 from website.queries.listing import load_entries
 from website.services import namespace_service
+from website.services import user_service
 
 
 def _inputs(request):
@@ -242,11 +243,8 @@ def get_subtitles(request, file_id):
 @throttle_classes([defaultAuthUserThrottle])
 @permission_classes([IsAuthenticated])
 def get_all_tags(request):
-    principal, _ = _inputs(request)
-    from website.services import user_service
-    user_service.authorize_user(principal, "read")
-    tags = Tag.objects.filter(owner=request.user)
-    return JsonResponse(TagSerializer.serialize_objects(tags), safe=False)
+    user = user_service.authorize_user(PrincipalFactory.from_authenticated_request(request), "read")
+    return JsonResponse(TagSerializer.serialize_objects(Tag.objects.filter(owner=user)), safe=False)
 
 
 @api_view(["POST"])
@@ -270,33 +268,35 @@ def get_files_media_position(request):
 @permission_classes([IsAuthenticated])
 def ultra_download_files_metadata(request, item_id):
     principal, credentials = _inputs(request)
-    files = (
-        (item["id"], item["name"], item["size"], item["crc"],
-         item["encryption_method"], item["lock_from_id"], item["key"], item["iv"])
-        for item in iter_download_files(principal, item_id, credentials)
-    )
-
-    response_data = [
+    folder, files, folders = list_download_folder_children(principal, item_id, credentials)
+    response_files = [
         {
-            "id": file_id,
-            "name": name,
-            "size": size,
-            "crc": crc,
-            "encryption_method": encryption_method,
-            "lockFrom": lock_from_id,
+            "id": file["id"],
+            "name": file["name"],
+            "size": file["size"],
+            "crc": file["crc"],
+            "encryption_method": file["encryption_method"],
+            "lockFrom": file["lock_from_id"],
             **(
                 {
-                    "key": base64.b64encode(key).decode("ascii"),
-                    "iv": base64.b64encode(iv).decode("ascii"),
+                    "key": base64.b64encode(file["key"]).decode("ascii"),
+                    "iv": base64.b64encode(file["iv"]).decode("ascii"),
                 }
-                if encryption_method != EncryptionMethod.Not_Encrypted.value
+                if file["encryption_method"] != EncryptionMethod.Not_Encrypted.value
                 else {}
             ),
         }
-        for file_id, name, size, crc, encryption_method, lock_from_id, key, iv in files
+        for file in files
     ]
-
-    return JsonResponse(response_data, safe=False)
+    return JsonResponse({
+        "folder": {
+            "id": str(folder.id), "name": folder.name,
+            "size": folder.visible_descendant_file_size,
+            "file_count": folder.visible_descendant_file_count,
+        },
+        "files": response_files,
+        "folders": folders,
+    })
 
 @api_view(["GET"])
 @throttle_classes([defaultAuthUserThrottle])

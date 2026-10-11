@@ -314,8 +314,6 @@ class FolderService:
 
             visible = folder.trashed_at is None
             operation_id = uuid.uuid4()
-            from website.tasks.deletion.workflow import publish_deletion_root
-            transaction.on_commit(lambda: publish_deletion_root("folder", str(folder.id)), robust=True)
             Folder.objects.filter(id=folder.id).update(
                 state=ItemState.DELETING, state_changed_at=timezone.now(),
                 deletion_operation_id=operation_id, deletion_is_root=True,
@@ -340,7 +338,10 @@ class FolderService:
             bump_folder_resources([folder.id])
             bump_folder_listings([folder.parent_id])
             folder.refresh_from_db(fields=["resource_version"])
-            send_event(RequestContext.from_user(owner_id), None, EventCode.ITEM_DELETE, [str(folder.id)])
+            transaction.on_commit(
+                lambda: send_event(RequestContext.from_user(owner_id), None, EventCode.ITEM_DELETE, [str(folder.id)]),
+                robust=True,
+            )
             return FolderCommandResult(str(folder.id), folder.resource_version, str(operation_id))
 
 

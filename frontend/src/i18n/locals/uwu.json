@@ -527,6 +527,7 @@
     "itemMovedToTrash": "Mowed {amount} items to twash",
     "itemRenamed": "Nyame changed",
     "itemsAreBeingDeleted": "Deweting...",
+    "deletingItemsProgress": "Deweting items {percentage}%...",
     "itemsAreBeingMoved": "Moving items {percentage}%...",
     "movingItemsToTrash": "Mowing items to Twash {percentage}%...",
     "restoringItems": "Westowing items {percentage}%...",

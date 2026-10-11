@@ -1,12 +1,11 @@
 import base64
 import hashlib
-from collections import deque
 from itertools import batched
 
 from django.contrib.auth import get_user_model
 
 from website.auth.permissions import (
-    ResourceAction, SignedResourcePrincipal)
+    ResourceAction, ResourceType, SignedResourcePrincipal)
 from website.config import MAX_THUMBNAIL_SIZE
 from website.constants import cache, MAX_MEDIA_CACHE_AGE
 from website.core.converters import param_to_bool
@@ -25,33 +24,30 @@ from website.services import attachment_service, cache_service, zip_service
 from website.auth.permissions.engine import permissions
 
 
-def iter_download_files(principal, item_id, credentials=None):
-    root_item = permissions.authorize(ResourceAction.DOWNLOAD_TREE_ROOT, principal, item_id, credentials).items[0]
-    root = {**root_item.row, "lock_from_id": root_item.state.lock_id}
-    if root["kind"] == "file":
-        yield root
-        return
-    pending, seen = deque([root["id"]]), {root["id"]}
-    while pending:
-        parent_ids = [pending.popleft() for _ in range(min(len(pending), 500))]
-        parents = permissions.authorize(ResourceAction.DOWNLOAD_TREE_CANDIDATES,
-            principal, root["id"], folder_ids=parent_ids, credentials=credentials,
-        ).items
-        parent_ids = {item.row["id"] for item in parents}
-        for model, kind in ((File, "file"), (Folder, "folder")):
-            ids = model.objects.filter(owner_id=principal.user_id, parent_id__in=parent_ids).order_by("id").values_list("id", flat=True)
-            for batch in batched(ids.iterator(chunk_size=500), 500):
-                selected = {"folder_ids" if kind == "folder" else "file_ids": list(batch)}
-                items = permissions.authorize(ResourceAction.DOWNLOAD_TREE_CANDIDATES,
-                    principal, root["id"], parent_ids=parent_ids, credentials=credentials, **selected,
-                ).items
-                for item in items:
-                    row = {**item.row, "lock_from_id": item.state.lock_id}
-                    if kind == "file":
-                        yield row
-                    elif row["id"] not in seen:
-                        seen.add(row["id"])
-                        pending.append(row["id"])
+def list_download_folder_children(principal, folder_id, credentials=None):
+    folder = permissions.authorize(ResourceAction.DOWNLOAD_SELECTED, principal, folder_id, credentials,
+                                   resource_type=ResourceType.FOLDER).items[0].resource
+    files = []
+    file_ids = File.objects.filter(owner_id=principal.user_id, parent_id=folder.id).order_by("id").values_list("id", flat=True)
+    for batch in batched(file_ids.iterator(chunk_size=500), 500):
+        authorized = permissions.authorize(ResourceAction.DOWNLOAD_CHILDREN, principal, str(folder.id),
+                                           file_ids=list(batch), credentials=credentials)
+        files.extend({**item.row, "lock_from_id": item.state.lock_id} for item in authorized.items)
+
+    folders = []
+    folder_rows = Folder.objects.filter(owner_id=principal.user_id, parent_id=folder.id).order_by("id").values(
+        "id", "visible_descendant_file_size", "visible_descendant_file_count",
+    )
+    for batch in batched(folder_rows.iterator(chunk_size=500), 500):
+        metadata = {str(row["id"]): row for row in batch}
+        authorized = permissions.authorize(ResourceAction.DOWNLOAD_CHILDREN, principal, str(folder.id),
+                                           folder_ids=list(metadata), credentials=credentials)
+        folders.extend({
+            "id": item.row["id"], "name": item.row["name"],
+            "size": metadata[item.row["id"]]["visible_descendant_file_size"],
+            "file_count": metadata[item.row["id"]]["visible_descendant_file_count"],
+        } for item in authorized.items)
+    return folder, files, folders
 
 
 def _authorized_signed_file(principal: SignedResourcePrincipal, *, for_zip: bool = False) -> File:

@@ -10,8 +10,7 @@ class DeletionJob(models.Model):
         PENDING = "PENDING"
         PLANNING = "PLANNING"
         RUNNING = "RUNNING"
-        COMPLETED = "COMPLETED"
-        PARTIAL = "PARTIAL"
+        FAILED = "FAILED"
 
     id = ShortUUIDField(primary_key=True, default=shortuuid.uuid, editable=False)
 
@@ -36,7 +35,11 @@ class DeletionJob(models.Model):
     started_at = models.DateTimeField(null=True, blank=True)
     finished_at = models.DateTimeField(null=True, blank=True)
     error = models.TextField(blank=True, default="")
+    consecutive_failures = models.PositiveIntegerField(default=0)
     heartbeat_at = models.DateTimeField(null=True, blank=True)
+    claim_token = models.UUIDField(null=True, blank=True)
+    claimed_at = models.DateTimeField(null=True, blank=True)
+    next_attempt_at = models.DateTimeField(null=True, blank=True)
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -45,7 +48,7 @@ class DeletionJob(models.Model):
         constraints = [
             models.UniqueConstraint(
                 fields=["requested_by"],
-                condition=models.Q(state__in=["PENDING", "PLANNING", "RUNNING"]),
+                condition=models.Q(state__in=["PLANNING", "RUNNING"]),
                 name="uniq_active_deletion_job_per_user",
             ),
         ]

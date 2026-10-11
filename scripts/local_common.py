@@ -2,10 +2,12 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import shutil
 import signal
 import socket
 import subprocess
+import threading
 import time
 from pathlib import Path
 
@@ -105,8 +107,10 @@ def stop_process_tree(process: subprocess.Popen) -> None:
             os.killpg(process.pid, signal.SIGKILL)
 
 
-def wait_for_processes(processes: list[subprocess.Popen]) -> int:
+def wait_for_processes(processes: list[subprocess.Popen], stop_requested: threading.Event | None = None) -> int:
     while all(process.poll() is None for process in processes):
+        if stop_requested is not None and stop_requested.is_set():
+            return 0
         time.sleep(0.25)
     return next(
         (process.returncode for process in processes if process.returncode not in (None, 0)),
@@ -114,15 +118,126 @@ def wait_for_processes(processes: list[subprocess.Popen]) -> int:
     )
 
 
-def acquire_instance_lock(address: tuple[str, int]) -> socket.socket:
-    instance_lock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+def acquire_instance_lock(address: tuple[str, int], launcher_name: str) -> socket.socket:
+    def bind() -> socket.socket:
+        listener = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        try:
+            listener.bind(address)
+            listener.listen(1)
+        except OSError:
+            listener.close()
+            raise
+        return listener
+
     try:
-        instance_lock.bind(address)
-        instance_lock.listen(1)
-    except OSError as error:
-        instance_lock.close()
-        raise RuntimeError(f"Another local launcher is already using lock {address}.") from error
-    return instance_lock
+        return bind()
+    except OSError:
+        pass
+
+    while True:
+        try:
+            answer = input(f"A local {launcher_name} launcher is already running on {address}. Kill it? [y/n]: ")
+        except EOFError as error:
+            raise RuntimeError("Cannot ask whether to stop the existing launcher") from error
+        answer = answer.strip().lower()
+        if answer in {"y", "yes"}:
+            break
+        if answer in {"n", "no"}:
+            raise RuntimeError(f"The existing {launcher_name} launcher was left running")
+        print("Please answer y or n.", flush=True)
+    unsupported_owner = False
+    try:
+        with socket.create_connection(address, timeout=2) as connection:
+            connection.settimeout(2)
+            connection.sendall(f"IDRIVE_STOP {launcher_name}\n".encode("ascii"))
+            with connection.makefile("rb") as stream:
+                response = stream.readline(16)
+            if response == b"NO\n":
+                raise RuntimeError("The lock belongs to a different or unsupported process")
+            unsupported_owner = response != b"OK\n"
+    except OSError:
+        unsupported_owner = True
+
+    if unsupported_owner:
+        if os.name != "nt":
+            raise RuntimeError("The launcher holding the lock cannot be stopped automatically")
+        stop_legacy_windows_launcher(address, launcher_name)
+
+    deadline = time.monotonic() + 60
+    while time.monotonic() < deadline:
+        try:
+            return bind()
+        except OSError:
+            time.sleep(0.2)
+    raise RuntimeError(f"The previous {launcher_name} launcher did not release lock {address}")
+
+
+def stop_legacy_windows_launcher(address: tuple[str, int], launcher_name: str) -> None:
+    """Replace a pre-control-protocol launcher only after checking its port and command line."""
+    expected_script = {"celery": "run_local_celery.py", "development": "run_local_dev.py"}[launcher_name]
+    netstat = subprocess.run(["netstat", "-ano", "-p", "tcp"], capture_output=True, text=True, check=True)
+    listener_pid = None
+    for line in netstat.stdout.splitlines():
+        parts = line.split()
+        if (len(parts) == 5 and parts[0] == "TCP" and parts[1] == f"{address[0]}:{address[1]}"
+                and parts[3] == "LISTENING" and parts[4].isdigit()):
+            listener_pid = int(parts[4])
+            break
+    if listener_pid is None:
+        raise RuntimeError("Could not identify the process holding the launcher lock")
+
+    powershell = shutil.which("powershell") or shutil.which("pwsh")
+    if powershell is None:
+        raise RuntimeError("PowerShell is required to verify the existing launcher")
+    inspect = subprocess.run([
+        powershell, "-NoProfile", "-Command",
+        f"$p = Get-CimInstance Win32_Process -Filter 'ProcessId = {listener_pid}'; "
+        "if ($p) { @{Name=$p.Name; CommandLine=$p.CommandLine} | ConvertTo-Json -Compress }",
+    ], capture_output=True, text=True, check=True)
+    try:
+        process = json.loads(inspect.stdout)
+    except (json.JSONDecodeError, TypeError) as error:
+        raise RuntimeError("Could not verify the process holding the launcher lock") from error
+    if not isinstance(process, dict):
+        raise RuntimeError("Could not verify the process holding the launcher lock")
+    command_line = process.get("CommandLine") or ""
+    script_pattern = r'(?:^|[\\/\s"])' + re.escape(expected_script) + r'(?:"|\s|$)'
+    if (process.get("Name", "").lower() not in {"python.exe", "pythonw.exe"}
+            or not re.search(script_pattern, command_line, re.IGNORECASE)):
+        raise RuntimeError("The lock is held by a process other than the expected local launcher")
+
+    print(f"Stopping existing {launcher_name} launcher (PID {listener_pid})...", flush=True)
+    subprocess.run(["taskkill", "/PID", str(listener_pid), "/T", "/F"],
+                   capture_output=True, text=True, check=False)
+
+
+def watch_instance_lock(instance_lock: socket.socket, launcher_name: str) -> threading.Event:
+    stop_requested = threading.Event()
+    instance_lock.settimeout(0.5)
+
+    def watch() -> None:
+        while not stop_requested.is_set():
+            try:
+                connection, _ = instance_lock.accept()
+            except socket.timeout:
+                continue
+            except OSError:
+                return
+            with connection:
+                connection.settimeout(2)
+                try:
+                    with connection.makefile("rb") as stream:
+                        message = stream.readline(64)
+                    if message == f"IDRIVE_STOP {launcher_name}\n".encode("ascii"):
+                        connection.sendall(b"OK\n")
+                        stop_requested.set()
+                    else:
+                        connection.sendall(b"NO\n")
+                except OSError:
+                    continue
+
+    threading.Thread(target=watch, name=f"{launcher_name}-lock-control", daemon=True).start()
+    return stop_requested
 
 
 def _dotenv_values(dotenv_python: Path | None) -> dict[str, str | None]:

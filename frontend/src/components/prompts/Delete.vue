@@ -50,17 +50,20 @@ export default {
 
       submit: onceAtATime(async function() {
          try {
-            let ids = this.selected.map((item) => item.id)
-            let res = await remove({ ids: ids })
+            const groups = new Map()
+            for (const item of this.selected) {
+               if (!groups.has(item.parent_id)) groups.set(item.parent_id, [])
+               groups.get(item.parent_id).push(item)
+            }
 
-            let message = this.$t("toasts.itemsAreBeingDeleted", { amount: ids.length })
-            this.$toast.info(message, {
-               timeout: null,
-               id: res.task_id
-            })
-
-            let filteredItems = this.items.filter((item) => !ids.includes(item.id))
-            this.setItems(filteredItems)
+            for (const items of groups.values()) {
+               const ids = items.map((item) => item.id)
+               const res = await remove({ ids })
+               const message = this.$t("toasts.itemsAreBeingDeleted", { amount: ids.length })
+               this.$toast.info(message, { timeout: null, id: res.task_id })
+               const submitted = new Set(ids)
+               this.setItems(this.items.filter((item) => !submitted.has(item.id)))
+            }
 
             if (this.currentPrompt.confirm) this.currentPrompt.confirm()
             this.resetSelected()

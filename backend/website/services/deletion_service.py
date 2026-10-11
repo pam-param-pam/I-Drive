@@ -21,8 +21,6 @@ def admit_file_deletions(owner_id, locked, request_context=None, job=None):
     Files already covered by a deleting ancestor are skipped. Returns operation
     IDs keyed by file ID.
     """
-    from website.tasks.deletion.workflow import publish_deletion_root
-
     deltas = {}
     stats = {}
     roots = {}
@@ -58,10 +56,6 @@ def admit_file_deletions(owner_id, locked, request_context=None, job=None):
     bump_file_resources(roots)
     bump_folder_listings(parent_ids)
     dirty_hashes(dirty_ids)
-    for root_id in roots:
-        transaction.on_commit(
-            lambda root_id=root_id: publish_deletion_root("file", root_id), robust=True,
-        )
     return roots
 
 

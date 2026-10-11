@@ -16,12 +16,14 @@ from local_common import (
     start_local_infrastructure,
     stop_process_tree,
     wait_for_processes, compose_command, LOCAL_COMPOSE_FILE,
+    watch_instance_lock,
 )
 
 
 INSTANCE_LOCK_ADDRESS = ("127.0.0.1", 55234)
 def main() -> int:
-    instance_lock = acquire_instance_lock(INSTANCE_LOCK_ADDRESS)
+    instance_lock = acquire_instance_lock(INSTANCE_LOCK_ADDRESS, "development")
+    stop_requested = watch_instance_lock(instance_lock, "development")
     processes: list[subprocess.Popen] = []
     docker = require_executable("docker")
     local_compose = compose_command(docker, LOCAL_COMPOSE_FILE)
@@ -54,7 +56,7 @@ def main() -> int:
                 ("Prometheus", f"http://localhost:{env['PROMETHEUS_PORT']}"),
             ),
         )
-        return wait_for_processes(processes)
+        return wait_for_processes(processes, stop_requested)
     except KeyboardInterrupt:
         return 0
     finally:

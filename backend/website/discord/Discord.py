@@ -1,5 +1,6 @@
 import json
 import logging
+import ssl
 import time
 from datetime import datetime, UTC
 from threading import Lock
@@ -31,7 +32,7 @@ if not logger.hasHandlers():
 class RawDiscordAPI:
     def __init__(self, timeout: float = 10.0):
         self.base_url = DISCORD_BASE_URL
-        self.client = httpx.Client(timeout=timeout)
+        self.client = httpx.Client(timeout=timeout, verify=ssl.create_default_context())
 
     def request(self, method: str, path: str, token: Optional[str] = None, params: dict = None, json: dict = None, files: dict = None, headers: dict = None) -> httpx.Response:
         if headers is None:

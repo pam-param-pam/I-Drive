@@ -36,6 +36,7 @@ class File(DeletionStateMixin, models.Model):
     # --- lifecycle state ---
     state = models.CharField(max_length=32, choices=ItemState.choices, default=ItemState.ACTIVE, db_index=True)
     state_changed_at = models.DateTimeField(null=True)
+    deletion_remote_done_at = models.DateTimeField(null=True, blank=True)
     resource_version = models.PositiveBigIntegerField(default=1)
     trashed_at = models.DateTimeField(null=True, blank=True, db_index=True)
 

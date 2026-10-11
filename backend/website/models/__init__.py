@@ -10,3 +10,5 @@ from .mixin_models import DiscordAttachmentMixin
 from .namespace_models import (FolderHashWork, FolderHeightRepair,
                                FolderLockScope, NamespaceOperation)
 from .delete_models import DeletionJob
+
+DISCORD_ATTACHMENT_MODELS = (Fragment, Thumbnail, Moment, Subtitle)

@@ -224,8 +224,10 @@ def change_password(request, principal: UserPrincipal, current_password: str, ne
 
 def create_new_user(username: str, password: str, is_superuser: bool):
     with transaction.atomic():
-        user = User.objects.create_user(username=username, password=password, is_superuser=is_superuser, is_staff=is_superuser)
+        user = User.objects.create_user(username=username, password=password, is_superuser=is_superuser,
+                                        is_staff=is_superuser)
         UserPerms._create_user_perms(user=user)
         UserSettings._create_user_settings(user=user)
         folder_service.FolderService.create_user_root(user)
         DiscordSettings._create_user_discord_settings(user=user)
+    return user

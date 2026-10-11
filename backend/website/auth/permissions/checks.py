@@ -209,13 +209,9 @@ def zip_member(row, state, _network_allowed, context):
         raise ResourceNotFoundError()
 
 
-@needs(Fact.ROW, Fact.ANCESTORS)
-def traversal_member(row, state, _network_allowed, context):
-    root_id = context.request.params["root_id"]
-    if row["id"] != root_id and root_id not in state.ancestor_ids:
-        raise ResourceNotFoundError()
-    parent_ids = context.request.get("parent_ids")
-    if parent_ids is not None and row["parent_id"] not in parent_ids:
+@needs(Fact.ROW)
+def direct_child(row, _state, _network_allowed, context):
+    if row["parent_id"] != context.request.params["root_id"]:
         raise ResourceNotFoundError()
 
 

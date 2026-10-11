@@ -702,7 +702,10 @@ class FileService:
                 FileCommandResult(file_id, locked.files[file_id].resource_version + 1, str(operation_id))
                 for file_id, operation_id in roots.items()
             ]
-            send_event(RequestContext.from_user(owner_id), None, EventCode.ITEM_DELETE, list(roots))
+            transaction.on_commit(
+                lambda: send_event(RequestContext.from_user(owner_id), None, EventCode.ITEM_DELETE, list(roots)),
+                robust=True,
+            )
             return results
 
     @staticmethod

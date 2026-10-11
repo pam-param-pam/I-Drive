@@ -39,26 +39,29 @@ export default {
    name: "RestoreFromTrash",
 
    computed: {
-      ...mapState(useMainStore, ["selectedCount", "currentPrompt", "selected", "items"])
+      ...mapState(useMainStore, ["selectedCount", "currentPrompt", "selected"])
    },
 
    methods: {
-      ...mapActions(useMainStore, ["closeHover", "resetSelected", "setItems"]),
+      ...mapActions(useMainStore, ["closeHover", "resetSelected"]),
 
       submit: onceAtATime(async function() {
+         const groups = new Map()
+         for (const item of this.selected) {
+            if (!groups.has(item.parent_id)) groups.set(item.parent_id, [])
+            groups.get(item.parent_id).push(item)
+         }
 
-         let ids = this.selected.map((item) => item.id)
-         let resourcePasswords = buildResourcePasswords(this.selected)
-
-         let res = await restoreFromTrash({ ids: ids, resourcePasswords })
-
-         let message = this.$t("toasts.itemsAreBeingRestoredFromTrash", { amount: ids.length })
-         this.$toast.info(message, {
-            timeout: null,
-            id: res.task_id
-         })
-         // let filteredItems = this.items.filter((item) => !ids.includes(item.id))
-         // this.setItems(filteredItems)
+         for (const items of groups.values()) {
+            const ids = items.map((item) => item.id)
+            const resourcePasswords = buildResourcePasswords(items)
+            const res = await restoreFromTrash({ ids, resourcePasswords })
+            const message = this.$t("toasts.itemsAreBeingRestoredFromTrash", { amount: ids.length })
+            this.$toast.info(message, {
+               timeout: null,
+               id: res.task_id
+            })
+         }
 
          if (this.currentPrompt.confirm) this.currentPrompt.confirm()
 
