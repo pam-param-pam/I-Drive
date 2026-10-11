@@ -31,7 +31,7 @@ class File(DeletionStateMixin, models.Model):
     encryption_method = models.SmallIntegerField()
     tags = models.ManyToManyField('Tag', blank=True, related_name='files')
     frontend_id = models.CharField(max_length=40, unique=True)
-    crc = models.BigIntegerField(null=True)
+    crc = models.PositiveBigIntegerField(null=True)
 
     # --- lifecycle state ---
     state = models.CharField(max_length=32, choices=ItemState.choices, default=ItemState.ACTIVE, db_index=True)
@@ -63,10 +63,6 @@ class File(DeletionStateMixin, models.Model):
                 name="%(class)s_valid_file_type"
             ),
             CheckConstraint(
-                condition=Q(size__gte=0),
-                name="%(class)s_size_non_negative"
-            ),
-            CheckConstraint(
                 condition=~Q(name__exact=""),
                 name="%(class)s_name_not_empty",
             ),
@@ -83,7 +79,8 @@ class File(DeletionStateMixin, models.Model):
                         )
                         |
                         (
-                                Q(encryption_method__gt=EncryptionMethod.Not_Encrypted.value)
+                                Q(encryption_method__in=[method.value for method in EncryptionMethod
+                                                        if method != EncryptionMethod.Not_Encrypted])
                                 & Q(key__isnull=False)
                                 & Q(iv__isnull=False)
                         )
@@ -94,20 +91,6 @@ class File(DeletionStateMixin, models.Model):
                 condition=Q(last_modified_at__gte=F("created_at")),
                 name="%(class)s_last_modified_after_created"
             ),
-            # crc must me non-negative or null
-            CheckConstraint(
-                condition=Q(crc__gte=0) | Q(crc__isnull=True),
-                name="%(class)s_crc_non_negative_or_null"
-            ),
-            # crc must be > 0 or null if size > 0
-            CheckConstraint(
-                condition=(
-                        Q(size__lte=0, crc=0) |
-                        Q(size__gt=0, crc__gt=0) |
-                        Q(crc__isnull=True)
-                ),
-                name="%(class)s_crc_valid_based_on_size"
-            )
         ]
 
     @classmethod
@@ -146,10 +129,10 @@ class Fragment(DiscordAttachmentMixin):
     file = models.ForeignKey(File, on_delete=models.CASCADE, related_name="fragments")
     created_at = models.DateTimeField(default=timezone.now)
     offset = models.PositiveBigIntegerField()
-    crc = models.BigIntegerField(null=True)
+    crc = models.PositiveBigIntegerField(null=True)
     state = models.CharField(max_length=32, choices=ItemState.choices, default=ItemState.ACTIVE, db_index=True)
 
-    class Meta:
+    class Meta(DiscordAttachmentMixin.Meta):
         ordering = ["sequence"]
 
         indexes = [
@@ -157,21 +140,16 @@ class Fragment(DiscordAttachmentMixin):
             models.Index(fields=["file", "state"]),
         ]
 
-        constraints = [
+        constraints = [*DiscordAttachmentMixin.Meta.constraints,
             # valid fragment state
             CheckConstraint(
                 condition=Q(state__in=[state.value for state in ItemState]),
                 name="%(class)s_valid_state",
             ),
-            # sequence must be non-negative
+            # Fragment numbering starts at one.
             CheckConstraint(
                 condition=Q(sequence__gt=0),
                 name="%(class)s_sequence_greater_than_zero",
-            ),
-            # offset must be non-negative
-            CheckConstraint(
-                condition=Q(offset__gte=0),
-                name="%(class)s_offset_non_negative",
             ),
             # unique fragment sequence for a file
             UniqueConstraint(
@@ -183,20 +161,6 @@ class Fragment(DiscordAttachmentMixin):
                 fields=["file", "offset"],
                 name="%(class)s_fragment_unique_offset_per_file",
             ),
-            # crc must me non-negative or null
-            CheckConstraint(
-                condition=Q(crc__gte=0) | Q(crc__isnull=True),
-                name="%(class)s_crc_non_negative_or_null"
-            ),
-            # crc must be > 0 or null if size > 0
-            CheckConstraint(
-                condition=(
-                        Q(size__lte=0, crc=0) |
-                        Q(size__gt=0, crc__gt=0) |
-                        Q(crc__isnull=True)
-                ),
-                name="%(class)s_crc_valid_based_on_size"
-            )
         ]
 
     def __str__(self):

@@ -111,9 +111,7 @@ class PermissionEngine:
             check(context)
         for check in policy.after_checks:
             check(context)
-        return AuthorizationResult.from_context(
-            context, include_ancestors=action in {ResourceAction.READ_SHARE, ResourceAction.DOWNLOAD_SHARE},
-        )
+        return AuthorizationResult.from_context(context)
 
     @staticmethod
     def _check_item(item, context, policy, rules, network_allowed):

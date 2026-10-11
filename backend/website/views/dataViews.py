@@ -1,6 +1,4 @@
 from website.queries.display import load_file_display, load_folder_display, load_folder_displays
-from website.services.media_service import list_download_folder_children
-import base64
 import hashlib
 import json
 import time
@@ -12,7 +10,7 @@ from rest_framework.permissions import IsAuthenticated
 
 from website.auth.permissions import PrincipalFactory, ResourceAction, ResourceType, extract_resource_credentials
 from website.auth.throttle import defaultAuthUserThrottle, SearchThrottle, FolderPasswordThrottle, MediaThrottle, SyncerThrottle
-from website.constants import SIGNED_URL_EXPIRY_SECONDS, API_BASE_URL, EncryptionMethod
+from website.constants import SIGNED_URL_EXPIRY_SECONDS, API_BASE_URL
 from website.core.Serializers import FileSerializer, VideoTrackSerializer, SubtitleTrackSerializer, AudioTrackSerializer, RawMetadataSerializer, PhotoMetadataSerializer, \
     FolderSerializer, \
     MomentSerializer, TagSerializer, MediaPositionSerializer, SubtitleSerializer
@@ -21,7 +19,7 @@ from website.core.errors import PermissionPasswordError, ResourceNotFoundError, 
 from website.core.helpers import validate_ids_as_list, extract_key
 from website.models import Folder, Subtitle, Moment, VideoTrack, VideoMetadata, SubtitleTrack, AudioTrack, Fragment, FolderHashWork
 from website.models.file_related_models import RawMetadata, PhotoMetadata, Tag, MediaPosition
-from website.queries.builders import build_breadcrumbs, build_file_path
+from website.queries.builders import build_breadcrumbs, build_file_path, build_download_folder_listing
 from website.queries.selectors import check_if_bots_exists
 from website.services import attachment_service
 from website.services import search_service
@@ -268,35 +266,9 @@ def get_files_media_position(request):
 @permission_classes([IsAuthenticated])
 def ultra_download_files_metadata(request, item_id):
     principal, credentials = _inputs(request)
-    folder, files, folders = list_download_folder_children(principal, item_id, credentials)
-    response_files = [
-        {
-            "id": file["id"],
-            "name": file["name"],
-            "size": file["size"],
-            "crc": file["crc"],
-            "encryption_method": file["encryption_method"],
-            "lockFrom": file["lock_from_id"],
-            **(
-                {
-                    "key": base64.b64encode(file["key"]).decode("ascii"),
-                    "iv": base64.b64encode(file["iv"]).decode("ascii"),
-                }
-                if file["encryption_method"] != EncryptionMethod.Not_Encrypted.value
-                else {}
-            ),
-        }
-        for file in files
-    ]
-    return JsonResponse({
-        "folder": {
-            "id": str(folder.id), "name": folder.name,
-            "size": folder.visible_descendant_file_size,
-            "file_count": folder.visible_descendant_file_count,
-        },
-        "files": response_files,
-        "folders": folders,
-    })
+    selected = permissions.authorize(ResourceAction.DOWNLOAD_SELECTED, principal, item_id, credentials,
+                                     resource_type=ResourceType.FOLDER).items[0]
+    return JsonResponse(build_download_folder_listing(selected.resource, selected.state.lock_id))
 
 @api_view(["GET"])
 @throttle_classes([defaultAuthUserThrottle])

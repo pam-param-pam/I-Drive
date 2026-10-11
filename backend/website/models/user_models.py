@@ -4,7 +4,7 @@ from django.db.models import CheckConstraint, Q
 
 
 class UserSettings(models.Model):
-    user = models.OneToOneField(User, on_delete=models.CASCADE, unique=True)
+    user = models.OneToOneField(User, on_delete=models.CASCADE)
     sorting_by = models.CharField(max_length=50, default="name")
     sort_by_asc = models.BooleanField(default=False)
     locale = models.CharField(max_length=20, default="en")
@@ -12,7 +12,7 @@ class UserSettings(models.Model):
     date_format = models.BooleanField(default=False)
     hide_locked_folders = models.BooleanField(default=False)
     concurrent_upload_requests = models.SmallIntegerField(default=4)
-    subfolders_in_shares = models.BooleanField(default=False)
+    subfolders_in_shares = models.BooleanField(default=True)
     encryption_method = models.SmallIntegerField(default=2)
     keep_creation_timestamp = models.BooleanField(default=False)
     popup_preview = models.BooleanField(default=False)
@@ -29,7 +29,7 @@ class UserSettings(models.Model):
 
 
 class UserPerms(models.Model):
-    user = models.OneToOneField(User, on_delete=models.CASCADE, unique=True)
+    user = models.OneToOneField(User, on_delete=models.CASCADE)
     globalLock = models.BooleanField(default=False)
     admin = models.BooleanField(default=False)
     create = models.BooleanField(default=True)
@@ -57,7 +57,7 @@ class DiscordSettings(models.Model):
     auto_setup_complete = models.BooleanField(default=False)
     category_id = models.CharField(max_length=19, null=True)
     role_id = models.CharField(max_length=19, null=True)
-    user = models.OneToOneField(User, on_delete=models.CASCADE, unique=True)
+    user = models.OneToOneField(User, on_delete=models.CASCADE)
     guild_id = models.CharField(max_length=19, null=True)
     attachment_name = models.CharField(max_length=20, null=True)
 

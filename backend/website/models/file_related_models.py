@@ -14,13 +14,13 @@ from .mixin_models import DiscordAttachmentMixin
 
 class Thumbnail(DiscordAttachmentMixin):
     id = ShortUUIDField(primary_key=True, default=shortuuid.uuid, editable=False)
-    file = models.OneToOneField(File, on_delete=models.CASCADE, unique=True)
+    file = models.OneToOneField(File, on_delete=models.CASCADE)
     created_at = models.DateTimeField(default=timezone.now)
     iv = models.BinaryField(null=True)
     key = models.BinaryField(null=True)
 
-    class Meta:
-        constraints = [
+    class Meta(DiscordAttachmentMixin.Meta):
+        constraints = [*DiscordAttachmentMixin.Meta.constraints,
             # key/iv consistency
             CheckConstraint(
                 condition=(
@@ -37,23 +37,18 @@ class Thumbnail(DiscordAttachmentMixin):
 
 class Moment(DiscordAttachmentMixin):
     id = ShortUUIDField(primary_key=True, default=shortuuid.uuid, editable=False)
-    file = models.ForeignKey(File, on_delete=models.CASCADE, unique=False)
+    file = models.ForeignKey(File, on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True)
-    timestamp = models.IntegerField()
+    timestamp = models.PositiveIntegerField()
     iv = models.BinaryField(null=True)
     key = models.BinaryField(null=True)
 
-    class Meta:
-        constraints = [
+    class Meta(DiscordAttachmentMixin.Meta):
+        constraints = [*DiscordAttachmentMixin.Meta.constraints,
             # file + timestamp must be unique
             UniqueConstraint(
                 fields=['file', 'timestamp'],
                 name='%(class)s_unique_file_timestamp'
-            ),
-            # timestamp >= 0
-            CheckConstraint(
-                condition=Q(timestamp__gte=0),
-                name="%(class)s_timestamp_non_negative",
             ),
             # encryption consistency
             CheckConstraint(
@@ -72,15 +67,7 @@ class Moment(DiscordAttachmentMixin):
 class MediaPosition(models.Model):
     file = models.OneToOneField(File, on_delete=models.CASCADE)
     modified_at = models.DateTimeField(auto_now=True)
-    timestamp = models.IntegerField(default=0)
-
-    class Meta:
-        constraints = [
-            CheckConstraint(
-                condition=Q(timestamp__gte=0),
-                name="%(class)s_timestamp_non_negative",
-            ),
-        ]
+    timestamp = models.PositiveIntegerField(default=0)
 
     def __str__(self):
         return f"Media position for file={self.file}"
@@ -114,8 +101,8 @@ class Subtitle(DiscordAttachmentMixin):
     created_at = models.DateTimeField(auto_now_add=True)
     forced = models.BooleanField(default=False)
 
-    class Meta:
-        constraints = [
+    class Meta(DiscordAttachmentMixin.Meta):
+        constraints = [*DiscordAttachmentMixin.Meta.constraints,
             # language cannot be empty
             CheckConstraint(
                 condition=~Q(language__exact=""),

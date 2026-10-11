@@ -105,9 +105,7 @@ def cancel_pending_qr_session_view(request, session_id):
 @throttle_classes([defaultAuthUserThrottle])
 @permission_classes([IsAuthenticated])
 def list_active_devices_view(request):
-    user_service.authorize_user(
-        PrincipalFactory.from_authenticated_request(request), "read",
-    )
+    user_service.authorize_user(PrincipalFactory.from_authenticated_request(request), "read")
     tokens = PerDeviceToken.objects.get_active_for_user(user=request.user)
     data = DeviceTokenSerializer.serialize_objects(tokens)
     return JsonResponse(data, safe=False)

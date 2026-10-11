@@ -2,7 +2,7 @@ from django.http import HttpResponse, JsonResponse
 from rest_framework.decorators import api_view, permission_classes, throttle_classes
 from rest_framework.permissions import IsAuthenticated
 
-from website.auth.permissions import PrincipalFactory, ResourceAction, ResourceType, extract_resource_credentials
+from website.auth.permissions import PrincipalFactory, extract_resource_credentials
 from website.auth.throttle import FolderPasswordThrottle, defaultAuthUserThrottle
 from website.core.Serializers import MomentSerializer, SubtitleSerializer, TagSerializer, ZipSerializer
 from website.core.helpers import extract_key
@@ -10,7 +10,6 @@ from website.core.http.utils import build_response
 from website.services import namespace_service, zip_service
 from website.services.file_service import FileService
 from website.services.folder_service import FolderService
-from website.auth.permissions.engine import permissions
 from website.services.thumbnail_service import ThumbnailService
 
 
@@ -155,7 +154,6 @@ def remove_tag_view(request, file_id, tag_id):
 @permission_classes([IsAuthenticated])
 def add_moment_view(request, file_id):
     principal, credentials = _inputs(request)
-    permissions.authorize(ResourceAction.DOWNLOAD_SELECTED, principal, file_id, credentials, resource_type=ResourceType.FILE)
     moment = FileService.add_moment(principal, file_id, request.data, credentials)
     return JsonResponse(MomentSerializer.serialize_object(moment), status=200)
 
@@ -174,7 +172,6 @@ def remove_moment_view(request, file_id, moment_id):
 @permission_classes([IsAuthenticated])
 def add_subtitle_view(request, file_id):
     principal, credentials = _inputs(request)
-    permissions.authorize(ResourceAction.DOWNLOAD_SELECTED, principal, file_id, credentials, resource_type=ResourceType.FILE)
     subtitle = FileService.create_subtitle(principal, file_id, request.data, credentials)
     return JsonResponse(SubtitleSerializer.serialize_object(subtitle), status=200)
 

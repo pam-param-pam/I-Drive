@@ -19,18 +19,18 @@ class DeletionJob(models.Model):
     requested_ids = models.JSONField()
 
     state = models.CharField(max_length=20, choices=State.choices, default=State.PENDING)
-    last_progress_percentage = models.IntegerField(default=0)
+    last_progress_percentage = models.PositiveIntegerField(default=0)
 
-    total_fragments = models.IntegerField(default=0)
-    deleted_fragments = models.IntegerField(default=0)
+    total_fragments = models.PositiveIntegerField(default=0)
+    deleted_fragments = models.PositiveIntegerField(default=0)
 
-    total_file_items = models.IntegerField(default=0)
-    done_file_items = models.IntegerField(default=0)
-    failed_file_items = models.IntegerField(default=0)
+    total_file_items = models.PositiveIntegerField(default=0)
+    done_file_items = models.PositiveIntegerField(default=0)
+    failed_file_items = models.PositiveIntegerField(default=0)
 
-    total_folder_items = models.IntegerField(default=0)
-    done_folder_items = models.IntegerField(default=0)
-    failed_folder_items = models.IntegerField(default=0)
+    total_folder_items = models.PositiveIntegerField(default=0)
+    done_folder_items = models.PositiveIntegerField(default=0)
+    failed_folder_items = models.PositiveIntegerField(default=0)
 
     started_at = models.DateTimeField(null=True, blank=True)
     finished_at = models.DateTimeField(null=True, blank=True)

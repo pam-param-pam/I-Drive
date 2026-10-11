@@ -95,10 +95,6 @@ class PerDeviceToken(models.Model):
                 name="%(class)s_last_used_after_created",
             ),
             UniqueConstraint(
-                fields=["user", "device_id"],
-                name="%(class)s_unique_device_per_user",
-            ),
-            UniqueConstraint(
                 fields=["user", "token_hash"],
                 name="%(class)s_unique_token_hash_per_user",
             )

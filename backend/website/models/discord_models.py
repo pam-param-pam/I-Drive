@@ -14,11 +14,6 @@ class Webhook(models.Model):
 
     class Meta:
         constraints = [
-            # Discord ID must not be empty
-            CheckConstraint(
-                condition=~Q(discord_id__exact=""),
-                name="%(class)s_discord_id_not_empty",
-            ),
             # URL must not be empty
             CheckConstraint(
                 condition=~Q(url__exact=""),

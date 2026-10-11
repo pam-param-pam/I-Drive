@@ -1,5 +1,5 @@
 from django.db import models
-from django.db.models import Q, CheckConstraint
+from django.db.models import CheckConstraint, Q
 
 class ItemState(models.TextChoices):
     ACTIVE = "active"          # normal, visible, usable
@@ -35,18 +35,6 @@ class DiscordAttachmentMixin(models.Model):
     class Meta:
         abstract = True
         constraints = [
-            CheckConstraint(
-                condition=Q(message_id__isnull=False) & ~Q(message_id__exact=""),
-                name="%(class)s_message_id_required",
-            ),
-            CheckConstraint(
-                condition=Q(attachment_id__isnull=False) & ~Q(attachment_id__exact=""),
-                name="%(class)s_attachment_id_required",
-            ),
-            CheckConstraint(
-                condition=Q(size__gte=0),
-                name="%(class)s_size_non_negative",
-            ),
             CheckConstraint(
                 condition=Q(message_id__regex=r'^[0-9]{17,19}$'),
                 name="%(class)s_message_id_snowflake_format",

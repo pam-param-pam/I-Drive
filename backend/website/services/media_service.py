@@ -1,6 +1,5 @@
 import base64
 import hashlib
-from itertools import batched
 
 from django.contrib.auth import get_user_model
 
@@ -17,37 +16,11 @@ from website.core.media.stream.sources.EmptyByteSource import EmptyByteSource
 from website.core.media.stream.sources.FragmentByteSource import FragmentedDiscordByteSource
 from website.core.media.stream.sources.ZipByteSource import ZipByteSource
 from website.core.media.utils import decrypt_bytes, fetch_discord_file, build_binary_response, build_streaming_response
-from website.models import File, Folder, Moment, Subtitle, Thumbnail
+from website.models import File, Moment, Subtitle, Thumbnail
 from website.queries.selectors import check_if_bots_exists
 from website.services import attachment_service, cache_service, zip_service
 
 from website.auth.permissions.engine import permissions
-
-
-def list_download_folder_children(principal, folder_id, credentials=None):
-    folder = permissions.authorize(ResourceAction.DOWNLOAD_SELECTED, principal, folder_id, credentials,
-                                   resource_type=ResourceType.FOLDER).items[0].resource
-    files = []
-    file_ids = File.objects.filter(owner_id=principal.user_id, parent_id=folder.id).order_by("id").values_list("id", flat=True)
-    for batch in batched(file_ids.iterator(chunk_size=500), 500):
-        authorized = permissions.authorize(ResourceAction.DOWNLOAD_CHILDREN, principal, str(folder.id),
-                                           file_ids=list(batch), credentials=credentials)
-        files.extend({**item.row, "lock_from_id": item.state.lock_id} for item in authorized.items)
-
-    folders = []
-    folder_rows = Folder.objects.filter(owner_id=principal.user_id, parent_id=folder.id).order_by("id").values(
-        "id", "visible_descendant_file_size", "visible_descendant_file_count",
-    )
-    for batch in batched(folder_rows.iterator(chunk_size=500), 500):
-        metadata = {str(row["id"]): row for row in batch}
-        authorized = permissions.authorize(ResourceAction.DOWNLOAD_CHILDREN, principal, str(folder.id),
-                                           folder_ids=list(metadata), credentials=credentials)
-        folders.extend({
-            "id": item.row["id"], "name": item.row["name"],
-            "size": metadata[item.row["id"]]["visible_descendant_file_size"],
-            "file_count": metadata[item.row["id"]]["visible_descendant_file_count"],
-        } for item in authorized.items)
-    return folder, files, folders
 
 
 def _authorized_signed_file(principal: SignedResourcePrincipal, *, for_zip: bool = False) -> File:

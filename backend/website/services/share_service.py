@@ -37,7 +37,7 @@ class ShareResolution:
         requested = authorized.items[-1] if authorized.items else authorized.root[0]
         chain = list(reversed(requested.state.ancestor_ids))
         start = chain.index(share.root_id) if share.root_folder_id is not None else len(chain)
-        breadcrumbs = tuple({"id": key, "name": requested.ancestors[key]["name"]}
+        breadcrumbs = tuple({"id": key, "name": authorized.ancestors[key]["name"]}
                             for key in chain[start:])
         return cls(share, authorized.root[0].resource, requested.resource,
                    breadcrumbs, authorized.data["allow_descendants"])

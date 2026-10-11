@@ -209,12 +209,6 @@ def zip_member(row, state, _network_allowed, context):
         raise ResourceNotFoundError()
 
 
-@needs(Fact.ROW)
-def direct_child(row, _state, _network_allowed, context):
-    if row["parent_id"] != context.request.params["root_id"]:
-        raise ResourceNotFoundError()
-
-
 @needs(Fact.ROW, Fact.ANCESTORS, Fact.TRASH)
 def top_level_trash(row, state, _network_allowed, context):
     loaded = context.items[0].loaded

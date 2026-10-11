@@ -1,8 +1,10 @@
-from website.queries.display import load_file_display
-from website.queries.resource_loader import ResourceLoader
+import base64
 import time
 from typing import Dict
 from typing import List, Iterable
+
+from website.queries.display import load_file_display
+from website.queries.resource_loader import ResourceLoader
 
 from rest_framework.exceptions import ValidationError
 
@@ -12,6 +14,8 @@ from website.discord.Discord import discord
 from website.models import Folder, File, Channel, Webhook, Bot, ShareAccessEvent
 from website.queries.hierarchy import get_folder_chain
 from website.auth.permissions import ResourceRef, ResourceType
+from website.constants import EncryptionMethod
+from website.queries.listing import visible_children
 
 
 def build_breadcrumbs(folder_obj: Folder) -> List[dict]:
@@ -164,3 +168,40 @@ def build_file_path(file: File, max_folder_id=None) -> str:
     folder_names = [folder_part["name"] for folder_part in folder_parts]
 
     return "/".join([*folder_names, file.name])
+
+
+def build_download_folder_listing(folder: Folder, lock_from_id: str | None) -> dict:
+    files = visible_children(File.objects.filter(
+        owner_id=folder.owner_id, parent_id=folder.id,
+    )).order_by("id").values("id", "name", "size", "crc", "encryption_method", "key", "iv")
+    folders = visible_children(Folder.objects.filter(
+        owner_id=folder.owner_id, parent_id=folder.id,
+    )).order_by("id").values("id", "name", "visible_descendant_file_size", "visible_descendant_file_count")
+
+    return {
+        "folder": {
+            "id": str(folder.id), "name": folder.name,
+            "size": folder.visible_descendant_file_size,
+            "file_count": folder.visible_descendant_file_count,
+        },
+        "files": [
+            {
+                "id": row["id"], "name": row["name"], "size": row["size"],
+                "crc": row["crc"], "encryption_method": row["encryption_method"],
+                "lockFrom": lock_from_id,
+                **({
+                    "key": base64.b64encode(row["key"]).decode("ascii"),
+                    "iv": base64.b64encode(row["iv"]).decode("ascii"),
+                } if row["encryption_method"] != EncryptionMethod.Not_Encrypted.value else {}),
+            }
+            for row in files.iterator(chunk_size=500)
+        ],
+        "folders": [
+            {
+                "id": row["id"], "name": row["name"],
+                "size": row["visible_descendant_file_size"],
+                "file_count": row["visible_descendant_file_count"],
+            }
+            for row in folders.iterator(chunk_size=500)
+        ],
+    }

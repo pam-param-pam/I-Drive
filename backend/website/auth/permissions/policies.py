@@ -23,7 +23,6 @@ class ResourceAction(StrEnum):
     RESTORE = "restore"
     REQUEST_DELETE = "request_delete"
     DOWNLOAD_SELECTED = "download_selected"
-    DOWNLOAD_CHILDREN = "download_children"
     CREATE_SHARE = "create_share"
     MANAGE_LOCK = "manage_lock"
     RESET_LOCK = "reset_lock"
@@ -319,17 +318,6 @@ POLICIES = MappingProxyType({
         credential_check=checks.lock_challenge,
         selection_checks=(checks.move_shape,),
         arguments=("principal", "item_ids", "destination_id", "credentials"),
-    ),
-    ResourceAction.DOWNLOAD_CHILDREN: Policy(
-        loader=load.download_children_root_loader,
-        items=(*FILTER_VISIBLE_RULES, Rule(checks.direct_child, OnFailure.FILTER, True)),
-        root=VISIBLE_RULES,
-        capabilities=("read", "download"),
-        credential_check=checks.lock_challenge,
-        item_credential_on_failure=OnFailure.FILTER,
-        allow_empty=True,
-        items_loader=load.download_children_loader,
-        arguments=("principal", "root_id"),
     ),
     ResourceAction.READ_SHARE: Policy(
         loader=load.share_loader,

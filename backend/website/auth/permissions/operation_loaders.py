@@ -183,18 +183,3 @@ def zip_items_loader(context, root_facts, item_facts, resources) -> AccessContex
     loaded = resources.load_many(_refs(request.get("file_ids"), request.get("folder_ids")),
                                  scope.owner_id, projected=True, facts=item_facts)
     return replace(context, items=as_items(loaded), data={**context.data, "scope": scope})
-
-
-def download_children_root_loader(context, root_facts, item_facts, resources) -> AccessContext:
-    request = context.request
-    root_id = extract_key(request.params, "root_id")
-    root = resources.load_many((ResourceRef(ResourceType.FOLDER, root_id),), request.principal.user_id,
-                               projected=True, facts=root_facts)
-    return replace(context, root=as_items(root))
-
-
-def download_children_loader(context, root_facts, item_facts, resources) -> AccessContext:
-    request = context.request
-    candidates = resources.load_many(_refs(request.get("file_ids"), request.get("folder_ids")),
-                                     request.principal.user_id, projected=True, facts=item_facts)
-    return replace(context, items=as_items(candidates))

@@ -140,7 +140,6 @@ class AuthorizedItem:
     row: dict
     state: FolderState
     resource: object | None
-    ancestors: dict
 
 
 @dataclass(frozen=True)
@@ -149,18 +148,23 @@ class AuthorizationResult:
     items: tuple[AuthorizedItem, ...]
     root: tuple[AuthorizedItem, ...]
     data: dict
+    ancestors: dict[str, dict]
 
     @classmethod
-    def from_context(cls, context: AccessContext, *, include_ancestors: bool = False) -> "AuthorizationResult":
+    def from_context(cls, context: AccessContext) -> "AuthorizationResult":
         def approved(item):
-            state = item.state
-            ancestors = ({key: item.loaded.ancestors[key] for key in state.ancestor_ids
-                          if key in item.loaded.ancestors} if include_ancestors else {})
             resource = item.resource if item.loaded.resources else None
-            return AuthorizedItem(dict(item.row), state, resource, ancestors)
+            return AuthorizedItem(dict(item.row), item.state, resource)
 
+        approved_items = (*context.accepted, *context.root)
+        ancestors = {
+            key: item.loaded.ancestors[key]
+            for item in approved_items
+            for key in item.state.ancestor_ids
+            if key in item.loaded.ancestors
+        }
         return cls(tuple(approved(item) for item in context.accepted),
-                   tuple(approved(item) for item in context.root), dict(context.data))
+                   tuple(approved(item) for item in context.root), dict(context.data), ancestors)
 
 
 def as_items(loaded, indices=None):
