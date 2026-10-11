@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from datetime import timedelta
 from typing import Optional
 
@@ -7,6 +8,7 @@ from django.utils import timezone
 from pydantic import BaseModel
 from user_agents import parse as parse_ua
 
+from website.auth.permissions.contexts import ResourceType
 from website.constants import SHARE_ACCESS_DURATION, ShareEventType
 from website.core.http.context import ShareContext
 from website.core.errors import BadRequestError, ResourceNotFoundError
@@ -14,11 +16,59 @@ from website.core.helpers import validate_value, get_ip
 from website.core.validators.GeneralChecks import IsPositive, MaxLength, NotEmpty
 from website.models import File, Folder, ShareableLink, ShareAccess, ShareAccessEvent
 from website.auth.permissions import (
-    CredentialSet, ResourceAction, ResourceType, SharePrincipal, UserPrincipal)
+    CredentialSet, ResourceAction, SharePrincipal, UserPrincipal)
 from website.services import namespace_lock_service, user_service
 from website.services.hierarchy_service import lock_folder_chains
-from website.auth.permissions.authorizer import authorizer
-from website.auth.permissions.authorizer import ShareResolution
+from website.auth.permissions.engine import permissions
+from website.queries.listing import load_entries
+
+
+@dataclass(frozen=True)
+class ShareResolution:
+    share: ShareableLink
+    root: object
+    requested: object
+    breadcrumbs: tuple[dict, ...]
+    allow_descendants: bool
+
+    @classmethod
+    def from_authorization(cls, authorized):
+        share = authorized.data["share"]
+        requested = authorized.items[-1] if authorized.items else authorized.root[0]
+        chain = list(reversed(requested.state.ancestor_ids))
+        start = chain.index(share.root_id) if share.root_folder_id is not None else len(chain)
+        breadcrumbs = tuple({"id": key, "name": requested.ancestors[key]["name"]}
+                            for key in chain[start:])
+        return cls(share, authorized.root[0].resource, requested.resource,
+                   breadcrumbs, authorized.data["allow_descendants"])
+
+    @property
+    def share_id(self):
+        return str(self.share.id)
+
+    @property
+    def owner_id(self):
+        return self.share.owner_id
+
+    @property
+    def root_type(self):
+        return self.share.get_type()
+
+    @property
+    def root_id(self):
+        return self.share.root_id
+
+    @property
+    def requested_type(self):
+        return "file" if self.requested._meta.model_name == "file" else "folder"
+
+    @property
+    def requested_id(self):
+        return str(self.requested.id)
+
+    @property
+    def expiration_time(self):
+        return self.share.expiration_time
 
 
 class ViewShare(BaseModel):
@@ -117,8 +167,7 @@ def create_share(
             resource = hierarchy.folders[str(resource_id)]
             locked_files = None
 
-        authorizer.require_item(
-            principal, ResourceAction.CREATE_SHARE, resource_id, credentials,
+        permissions.authorize(ResourceAction.CREATE_SHARE, principal, resource_id, credentials,
             resource_type=resource_type, locked_hierarchy=hierarchy, locked_files=locked_files,
         )
 
@@ -183,13 +232,19 @@ def resolve_share(
     requested_type: ResourceType | None = None, requested_id: str | None = None,
     credentials: CredentialSet | None = None,
 ) -> ShareResolution:
-    return authorizer.require_share(
-        principal, action, resource_type=requested_type, item_id=requested_id, credentials=credentials,
-    )
+    authorized = permissions.authorize(action, principal, resource_type=requested_type,
+                                       item_id=requested_id, credentials=credentials)
+    return ShareResolution.from_authorization(authorized)
 
 
 def list_share_children(principal, folder_id, credentials=None):
-    return authorizer.list_share_children(principal, folder_id, credentials)
+    authorized = permissions.authorize(ResourceAction.READ_SHARE, principal, folder_id, credentials)
+    resolution = ShareResolution.from_authorization(authorized)
+    requested = authorized.items[-1]
+    children = load_entries(requested.row, requested.state,
+                            include_folders=authorized.data["allow_descendants"],
+                            exclude_locked_folders=True)
+    return resolution, children
 
 
 def _get_or_create_recent_share_access(share: ShareableLink, context: ShareContext) -> ShareAccess:

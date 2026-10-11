@@ -278,8 +278,8 @@ export class RequestProducer extends PipelineWorker {
          // potem a1, b2
          // potem a1, b2, c3
          let path_key = fileObj.uploadId + pathParts.slice(0, i).join("/")
-         if (this.createdFolders[path_key]) {
-            parentFolder = this.createdFolders[path_key]
+         if (this.createdFolders.has(path_key)) {
+            parentFolder = this.createdFolders.get(path_key)
          } else {
             let folderName = pathParts.slice(0, i)[pathParts.slice(0, i).length - 1]
             let folder
@@ -291,8 +291,12 @@ export class RequestProducer extends PipelineWorker {
                throw new Error("Failed to create a parent folder.")
             }
 
+            if (typeof folder?.id !== "string" || !folder.id.trim()) {
+               throw new Error("Folder creation returned no ID for " + folderName)
+            }
+
             parentFolder = folder.id
-            this.createdFolders[path_key] = folder.id
+            this.createdFolders.set(path_key, folder.id)
          }
       }
       return parentFolder

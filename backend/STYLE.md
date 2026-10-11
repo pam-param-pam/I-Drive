@@ -4,7 +4,7 @@ Use the existing module's conventions and keep transport, authorization, queries
 
 - Use function-based DRF API views. Apply the appropriate method, authentication/permission and throttle decorators. New view names should end in `_view`.
 - Views parse inputs and construct typed principals/credentials. Domain services select the action; request data must not select weaker checks.
-- Use `authorizer` from `website.auth.permissions.authorizer` for resource authorization. The policy registry composes checks centrally. See [authorization-access-api.md](../authorization-access-api.md).
+- Use `permissions.authorize(ResourceAction.NAME, ...)` from `website.auth.permissions.engine` for resource authorization. Each action has one policy in `policies.py`. See [authorization-access-api.md](../authorization-access-api.md).
 - Put database loading in `queries`, permission decisions and listing predicates in `auth/permissions`, and domain mutations in `services`. Background orchestration belongs in `tasks`.
 - File/folder serializers format display projections loaded explicitly through `queries.display`; serializers must not resolve hierarchy or call services. Load related display data before formatting other models.
 - Mutations validate current rows under the applicable transaction, owner barrier and resource locks. Use existing locked service cores for accepted namespace work.

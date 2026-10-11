@@ -1,11 +1,9 @@
 """Durable, bounded repairs for derived folder state."""
 
 from django.db import transaction
-from django.db.models import Exists, OuterRef
-
 from website.celery import app
 from website.core.helpers import hash_direct_folder_entries
-from website.models import DeletionScope, File, Folder, FolderHashWork, FolderHeightRepair
+from website.models import File, Folder, FolderHashWork, FolderHeightRepair
 from website.models.mixin_models import ItemState
 from website.services import namespace_lock_service
 
@@ -15,23 +13,15 @@ HEIGHT_BATCH_SIZE = 100
 
 
 def _visible_files(folder_id):
-    deletion = DeletionScope.objects.filter(
-        root_file_id=OuterRef("pk"), state=DeletionScope.State.ACTIVE,
-    )
     return list(
         File.objects.filter(parent_id=folder_id, state=ItemState.ACTIVE, trashed_at__isnull=True)
-        .annotate(has_deletion=Exists(deletion)).filter(has_deletion=False)
         .values("name", "crc")
     )
 
 
 def _visible_folders(folder_id):
-    deletion = DeletionScope.objects.filter(
-        root_folder_id=OuterRef("pk"), state=DeletionScope.State.ACTIVE,
-    )
     return list(
         Folder.objects.filter(parent_id=folder_id, state=ItemState.ACTIVE, trashed_at__isnull=True)
-        .annotate(has_deletion=Exists(deletion)).filter(has_deletion=False)
         .values("id", "name", "subtree_hash", "hash_input_generation", "hash_computed_generation")
     )
 

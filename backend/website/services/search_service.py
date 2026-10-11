@@ -15,7 +15,7 @@ from website.models import Folder, File
 from website.queries.hierarchy import get_descendant_folder_ids
 from website.auth.permissions import (
     CredentialSet, ResourceAction, ResourceType, UserPrincipal)
-from website.auth.permissions.authorizer import authorizer
+from website.auth.permissions.engine import permissions
 
 
 _FILTER_FIELDS = {
@@ -256,10 +256,10 @@ def perform_search(principal: UserPrincipal, data: dict, credentials: Credential
         .values_list("id", flat=True)[:candidate_limit]
     ) if include_folders else []
 
-    visible = authorizer.filter_items(
-        principal, ResourceAction.SEARCH, file_ids=file_candidate_ids,
+    visible = tuple(item.resource for item in permissions.authorize(
+        ResourceAction.SEARCH, principal, file_ids=file_candidate_ids,
         folder_ids=folder_candidate_ids, credentials=credentials,
-    )
+    ).items)
     authorized_files = {str(item.id) for item in visible if isinstance(item, File)}
     authorized_folders = {str(item.id) for item in visible if isinstance(item, Folder)}
 

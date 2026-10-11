@@ -20,7 +20,7 @@ from website.services.derived_state_service import (bump_file_resources, bump_fo
 from website.services import cache_service
 from website.services.file_service import lock_files_with_parents, set_thumbnail
 from website.websockets.utils import send_event
-from website.auth.permissions.authorizer import authorizer
+from website.auth.permissions.engine import permissions
 
 
 @dataclass(frozen=True)
@@ -65,17 +65,12 @@ def _existing_thumbnail_rows(file_obj: File) -> tuple[Thumbnail, ...]:
 
 class ThumbnailService:
     @staticmethod
-    def _cleanup_cache(file_id: str, resource_version: int) -> None:
-        cache.delete_many([
-            cache_service.get_thumbnail_key(file_id),
-            cache_service.get_thumbnail_key(file_id, resource_version - 1),
-        ])
+    def _cleanup_cache(file_id: str) -> None:
+        cache.delete(cache_service.get_thumbnail_key(file_id))
 
     @staticmethod
     def _cleanup_committed_cache(file_id: str) -> None:
-        resource_version = File.objects.filter(id=file_id).values_list("resource_version", flat=True).first()
-        if resource_version is not None:
-            ThumbnailService._cleanup_cache(file_id, resource_version)
+        ThumbnailService._cleanup_cache(file_id)
 
     @staticmethod
     def add_to_new_file(file_obj: File, data: dict) -> Thumbnail:
@@ -110,12 +105,12 @@ class ThumbnailService:
             bump_folder_listings([file_obj.parent_id])
             file_obj.refresh_from_db(fields=["resource_version"])
             result = ThumbnailMutationResult(str(file_obj.id), file_obj.resource_version)
-        ThumbnailService._cleanup_cache(result.file_id, result.resource_version)
+        ThumbnailService._cleanup_cache(result.file_id)
         return result
 
     @staticmethod
     def _finish(principal: UserPrincipal, result: ThumbnailMutationResult) -> None:
-        ThumbnailService._cleanup_cache(result.file_id, result.resource_version)
+        ThumbnailService._cleanup_cache(result.file_id)
         owner = User.objects.get(id=principal.user_id)
         if result.removed_attachments:
             from website.services import attachment_service
@@ -133,8 +128,7 @@ class ThumbnailService:
             namespace_lock_service.lock_owner_scope_shared(owner_id)
             locked = lock_files_with_parents(owner_id, [file_id])
             file_obj = locked.files[str(file_id)]
-            authorizer.require_item(
-                principal, ResourceAction.EDIT_METADATA, file_id, credentials,
+            permissions.authorize(ResourceAction.EDIT_METADATA, principal, file_id, credentials,
                 resource_type=ResourceType.FILE, locked_hierarchy=locked.hierarchy, locked_files=locked.files,
             )
             check_if_bots_exists(owner_id)

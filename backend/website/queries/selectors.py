@@ -30,6 +30,8 @@ DiscordAttachmentClasses = get_classes_extending_discordAttachmentMixin()
 
 
 def query_attachments(channel_id=None, message_id=None, attachment_id=None, author_id=None, owner=None, message_keys=None) -> list[DiscordAttachmentMixin]:
+    if not any((channel_id, message_id, attachment_id, author_id, owner)) and message_keys is None:
+        raise ValueError("Attachment query requires a filter")
     # Create a Q object to build the query
     query = Q()
 

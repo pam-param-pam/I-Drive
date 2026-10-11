@@ -1,7 +1,14 @@
 import re
 
 from website.config import MAX_RESOURCE_NAME_LENGTH
-from website.core.validators.Check import Check
+
+
+class Check:
+    def check(self, value):
+        raise NotImplementedError
+
+    def is_number_type(self, value):
+        return isinstance(value, (int, float)) and not isinstance(value, bool)
 
 
 class NotEmpty(Check):

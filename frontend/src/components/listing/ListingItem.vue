@@ -112,7 +112,8 @@ export default {
       },
       imageSrcSmall() {
          if (!this.imageSrc || this.item.thumbOff) return
-         if (this.fallback || this.areImagesBlocked) return "/img/failed.svg"
+         if (this.fallback) return
+         if (this.areImagesBlocked) return "/img/failed.svg"
          return this.imageSrc
       },
       type() {
@@ -427,6 +428,13 @@ export default {
          const img = event.target
 
          if (!this.isInSortedItems) return
+         if (this._thumbnailBlobUrl && img.src === this._thumbnailBlobUrl) {
+            URL.revokeObjectURL(this._thumbnailBlobUrl)
+            this._thumbnailBlobUrl = null
+            this.waitingForCredential = false
+            this.fallback = true
+            return
+         }
          if (img.dataset.failed) return
          img.dataset.failed = "true"
 

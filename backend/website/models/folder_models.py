@@ -4,11 +4,11 @@ from django.db import models
 from django.db.models import F, CheckConstraint, Q
 from shortuuidfield import ShortUUIDField
 
-from .mixin_models import ItemState
+from .mixin_models import ItemState, DeletionStateMixin
 from website.models.constraints.parent_owner_match_constraint import ParentOwnerConstraint
 
 
-class Folder(models.Model):
+class Folder(DeletionStateMixin, models.Model):
     id = ShortUUIDField(default=shortuuid.uuid, primary_key=True, editable=False)
     name = models.CharField(max_length=100)
     parent = models.ForeignKey('self', on_delete=models.CASCADE, null=True, related_name='subfolders', blank=True)
@@ -21,7 +21,7 @@ class Folder(models.Model):
     state_changed_at = models.DateTimeField(null=True, blank=True)
 
     trashed_at = models.DateTimeField(null=True, blank=True, db_index=True)
-    physical_file_stats = models.JSONField(default=dict)
+    visible_file_stats = models.JSONField(default=dict)
 
     # Transactionally maintained subtree aggregates.
     physical_descendant_folder_count = models.PositiveBigIntegerField(default=0)

@@ -43,7 +43,7 @@ def build_share_resource_dict(resource_in_share: Folder | File) -> Dict:
 
 
 def build_share_folder_content(folder_obj: Folder, children) -> Dict:
-    """Format the authorizer's checked listing without another visibility query."""
+    """Format the permission engine's checked listing without another visibility query."""
     rows = [ShareFileSerializer.serialize_dict(item) if isinstance(item, dict)
             else ShareFolderSerializer.serialize_object(item) for item in children]
     folder_dict = build_share_resource_dict(folder_obj)
@@ -103,16 +103,17 @@ def build_discord_settings(user) -> dict:
 
 
 def create_share_events(events: Iterable[ShareAccessEvent]):
+    events = tuple(events)
     serialized = ShareAccessEventSerializer.serialize_objects(events)
 
     file_ids = {
-        e.metadata.get("file_id")
+        e.metadata["file_id"]
         for e in events
         if e.metadata and "file_id" in e.metadata
     }
 
     folder_ids = {
-        e.metadata.get("folder_id")
+        e.metadata["folder_id"]
         for e in events
         if e.metadata and "folder_id" in e.metadata
     }
@@ -128,7 +129,7 @@ def create_share_events(events: Iterable[ShareAccessEvent]):
     }
 
     for event_dict in serialized:
-        metadata = event_dict.get("metadata") or {}
+        metadata = event_dict["metadata"]
 
         file_id = metadata.get("file_id")
         if file_id and file_id in files:
@@ -143,13 +144,6 @@ def create_share_events(events: Iterable[ShareAccessEvent]):
 
 def build_file_path(file: File, max_folder_id=None) -> str:
     folder = file.parent
-
-    if folder is None:
-        if max_folder_id is not None:
-            raise ValidationError("folder_id is not an ancestor of this file.")
-
-        return file.name
-
     folder_parts = [{"id": item.id, "name": item.name} for item in get_folder_chain(str(folder.id))]
 
     if max_folder_id is not None:

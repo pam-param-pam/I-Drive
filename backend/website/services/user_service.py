@@ -4,7 +4,7 @@ from django.db import transaction
 from website.config import MAX_NUMBER_OF_CHANNELS
 from website.constants import EncryptionMethod, EventCode, ClientsideDecryptionMethod
 from website.core.http.context import RequestContext
-from website.core.errors import BadRequestError, ResourceNotFoundError, ResourcePermissionError
+from website.core.errors import BadRequestError, MalformedDatabaseState, ResourceNotFoundError, ResourcePermissionError
 from website.core.helpers import validate_key, validate_value, validate_ids_as_list
 from website.discord.Discord import discord
 from website.discord.DiscordHelper import DiscordHelperService
@@ -24,7 +24,7 @@ def _authorized_user(principal: UserPrincipal, *capabilities: str, allow_global_
         raise ResourceNotFoundError()
     perms = UserPerms.objects.filter(user_id=user.id).first()
     if perms is None:
-        raise ResourceNotFoundError()
+        raise MalformedDatabaseState("User permissions are missing")
     if perms.globalLock and not allow_global_lock:
         raise ResourcePermissionError("Account is locked")
     if not perms.admin and not all(getattr(perms, capability) for capability in capabilities):
@@ -79,15 +79,15 @@ def update_user_settings(principal: UserPrincipal, data: dict) -> UserSettings:
     if encryption_method is not None:
         try:
             EncryptionMethod(encryption_method)
-        except Exception:
-            raise BadRequestError("Invalid encryption method")
+        except ValueError as exception:
+            raise BadRequestError("Invalid encryption method") from exception
         settings.encryption_method = encryption_method
 
     if clientside_decryption_method is not None:
         try:
             ClientsideDecryptionMethod(clientside_decryption_method)
-        except Exception:
-            raise BadRequestError("Invalid clientside decryption method")
+        except ValueError as exception:
+            raise BadRequestError("Invalid clientside decryption method") from exception
         settings.clientside_decryption_method = clientside_decryption_method
 
     # ---- SIMPLE ASSIGNMENTS ----
@@ -259,9 +259,9 @@ def auto_setup_discord_settings(principal: UserPrincipal, guild_id: str, bot_tok
 
             settings.auto_setup_complete = True
             settings.save()
-        except Exception as e:
+        except Exception:
             result.rollbackState.rollback()
-            raise e
+            raise
 
     discord.remove_user_state(user)
 

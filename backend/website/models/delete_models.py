@@ -3,7 +3,6 @@ from django.contrib.auth.models import User
 from django.db import models
 from shortuuid.django_fields import ShortUUIDField
 
-from ..models import File, Folder
 
 
 class DeletionJob(models.Model):
@@ -49,70 +48,4 @@ class DeletionJob(models.Model):
                 condition=models.Q(state__in=["PENDING", "PLANNING", "RUNNING"]),
                 name="uniq_active_deletion_job_per_user",
             ),
-        ]
-
-
-class DeletionFileWorkItem(models.Model):
-    class State(models.TextChoices):
-        PENDING = "PENDING"
-        CLAIMED = "CLAIMED"
-        REMOTE_DONE = "REMOTE_DONE"
-        DONE = "DONE"
-        FAILED = "FAILED"
-
-    id = ShortUUIDField(primary_key=True, default=shortuuid.uuid, editable=False)
-    scope = models.ForeignKey("DeletionScope", on_delete=models.CASCADE, related_name="file_items")
-    file = models.ForeignKey(File, on_delete=models.CASCADE)
-
-    state = models.CharField(max_length=20, choices=State.choices, default=State.PENDING)
-    claim_token = models.UUIDField(null=True, blank=True)
-    claimed_at = models.DateTimeField(null=True, blank=True)
-    attempts = models.IntegerField(default=0)
-
-    last_error = models.TextField(blank=True, default="")
-    remote_done_at = models.DateTimeField(null=True, blank=True)
-    finished_at = models.DateTimeField(null=True, blank=True)
-
-    created_at = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
-        indexes = [
-            models.Index(fields=["scope", "state"]),
-            models.Index(fields=["claim_token"]),
-        ]
-        constraints = [
-            models.UniqueConstraint(fields=["scope", "file"], name="uniq_scope_file")
-        ]
-
-
-class DeletionFolderWorkItem(models.Model):
-    class State(models.TextChoices):
-        PENDING = "PENDING"
-        CLAIMED = "CLAIMED"
-        DONE = "DONE"
-        FAILED = "FAILED"
-
-    id = ShortUUIDField(primary_key=True, default=shortuuid.uuid, editable=False)
-    scope = models.ForeignKey("DeletionScope", on_delete=models.CASCADE, related_name="folder_items")
-    folder = models.ForeignKey(Folder, on_delete=models.CASCADE)
-
-    state = models.CharField(max_length=20, choices=State.choices, default=State.PENDING)
-    file_cursor = models.CharField(max_length=22, null=True, blank=True)
-    folder_cursor = models.CharField(max_length=22, null=True, blank=True)
-    expansion_complete = models.BooleanField(default=False)
-
-    claim_token = models.UUIDField(null=True, blank=True)
-    claimed_at = models.DateTimeField(null=True, blank=True)
-    attempts = models.IntegerField(default=0)
-
-    last_error = models.TextField(blank=True, default="")
-    finished_at = models.DateTimeField(null=True, blank=True)
-
-    class Meta:
-        indexes = [
-            models.Index(fields=["scope", "state"]),
-            models.Index(fields=["scope", "expansion_complete", "state"]),
-        ]
-        constraints = [
-            models.UniqueConstraint(fields=["scope", "folder"], name="uniq_scope_folder")
         ]

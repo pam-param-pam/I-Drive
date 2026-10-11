@@ -83,12 +83,8 @@ export default {
       ...mapActions(useMainStore, ["closeHover", "setFolderPassword"]),
 
       submit: onceAtATime(async function() {
-         let res = await resetPassword(this.folderId, this.accountPassword, this.folderPassword)
-         let message = this.$t("toasts.passwordIsBeingUpdated")
-         this.$toast.info(message, {
-            timeout: null,
-            id: res.task_id
-         })
+         await resetPassword(this.folderId, this.accountPassword, this.folderPassword)
+         this.$toast.success(this.$t("toasts.passwordUpdated"))
          this.setFolderPassword({ folderId: this.folderId, password: this.folderPassword })
 
          if (this.previousPromptName === "FolderPassword") {

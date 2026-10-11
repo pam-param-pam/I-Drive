@@ -32,6 +32,11 @@
                <i v-else-if="deviceInfo.device_type === 'code'" class="material-icons">terminal</i>
                {{ deviceInfo.device_type }}
             </p>
+
+            <label class="qr-keep-login">
+               <input type="checkbox" v-model="keepLoggedIn" />
+               {{ $t("login.keepMeLoggedIn") }}
+            </label>
          </div>
 
          <p v-if="fetching">Fetching device info...</p>
@@ -84,7 +89,8 @@ export default {
          sessionId: null,
          deviceInfo: null,
          countdown: 0,
-         canApprove: false
+         canApprove: false,
+         keepLoggedIn: false
       }
    },
 
@@ -157,7 +163,7 @@ export default {
 
       async confirm() {
          if (!this.sessionId) return
-         await approveQrSession(this.sessionId)
+         await approveQrSession(this.sessionId, this.keepLoggedIn)
          this.$toast.success(this.$t("toasts.qrSessionApproved"))
          this.closeHover()
       },
@@ -204,5 +210,20 @@ export default {
 .material-icons {
   font-size: 20px !important;
   vertical-align: -5px;
+}
+
+.qr-keep-login {
+  display: flex;
+  align-items: center;
+  gap: 0.5em;
+  margin-top: 0.6em;
+  cursor: pointer;
+  user-select: none;
+}
+
+.qr-keep-login input[type="checkbox"] {
+  width: auto;
+  accent-color: #007bff;
+  cursor: pointer;
 }
 </style>

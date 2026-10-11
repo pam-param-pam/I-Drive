@@ -10,12 +10,12 @@ from shortuuidfield import ShortUUIDField
 from simple_history.models import HistoricalRecords
 
 from website.constants import FILE_TYPE_CHOICES, EncryptionMethod
-from website.models.mixin_models import ItemState, DiscordAttachmentMixin
+from website.models.mixin_models import ItemState, DeletionStateMixin, DiscordAttachmentMixin
 from .folder_models import Folder
 from website.models.constraints.parent_owner_match_constraint import ParentOwnerConstraint
 
 
-class File(models.Model):
+class File(DeletionStateMixin, models.Model):
     internal_created_at = models.DateTimeField(default=timezone.now)
     id = ShortUUIDField(primary_key=True, default=shortuuid.uuid, editable=False)
     name = models.CharField(max_length=100)

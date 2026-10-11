@@ -55,9 +55,11 @@ export async function closePendingQrSession(sessionId) {
 }
 
 
-export async function approveQrSession(sessionId) {
+export async function approveQrSession(sessionId, longLived = false) {
    let url = `/auth/qrcode/${sessionId}`
-   let response = await backendInstance.patch(url)
+   let response = await backendInstance.patch(url, {
+      long_lived: longLived
+   })
    return response.data
 }
 

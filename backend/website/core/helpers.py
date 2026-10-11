@@ -3,13 +3,13 @@ import hashlib
 import math
 import time
 from functools import wraps
-from typing import Optional, Callable, Any, List
+from typing import Optional, Callable, Any, Sequence
 from typing import Union, Type, Tuple
 
 from website.services import cache_service
 from website.constants import EXTENSION_TO_FILE_TYPE, EncryptionMethod, cache
 from website.core.errors import BadRequestError
-from website.core.validators.Check import Check
+from website.core.validators.GeneralChecks import Check
 
 _SENTINEL = object()  # Unique object to detect omitted default
 
@@ -121,7 +121,8 @@ def extract_key(data: Optional[dict], key: str, *, default: Any = _REQUIRED) -> 
     return data[key]
 
 
-def validate_value(value: Any, expected_types: Union[Type, Tuple[Type, ...]], *, default: Any = _REQUIRED, checks: Optional[List[Callable]] = None) -> Any:
+def validate_value(value: Any, expected_types: Union[Type, Tuple[Type, ...]], *, default: Any = _REQUIRED,
+                   checks: Sequence[type[Check] | Check] | None = None) -> Any:
     # Handle None
     if value is None:
         if default is _REQUIRED:
@@ -144,20 +145,17 @@ def validate_value(value: Any, expected_types: Union[Type, Tuple[Type, ...]], *,
 
     # Run checks
     if checks:
-        normalized_checks = []
         for check in checks:
-            if isinstance(check, type) and issubclass(check, Check):
-                check = check()
-            normalized_checks.append(check)
-        for check in normalized_checks:
-            if not check.check(value):
-                raise BadRequestError(f"Validation failed on {type(check).__name__} with value '{value}'")
+            validator = check() if isinstance(check, type) else check
+            if not validator.check(value):
+                raise BadRequestError(f"Validation failed on {type(validator).__name__} with value '{value}'")
 
     return value
 
 
 def validate_key(data: Optional[dict], key: str, expected_types: Union[Type, Tuple[Type, ...]], *, default: Any = _REQUIRED,
-                 checks: Optional[List[Callable]] = None, converter: Optional[Callable[[Any], Any]] = None) -> Any:
+                 checks: Sequence[type[Check] | Check] | None = None,
+                 converter: Optional[Callable[[Any], Any]] = None) -> Any:
     value = extract_key(data, key, default=default)
 
     if converter is not None and value is not None:

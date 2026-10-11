@@ -7,6 +7,23 @@ class ItemState(models.TextChoices):
     DELETED = "deleted"        # deleted, should not be used
     REMOTE_MISSING = "remote_missing"        # deleted, should not be used
 
+class DeletionStateMixin(models.Model):
+    """Durable deletion work and recovery state stored on the affected item."""
+
+    deletion_operation_id = models.UUIDField(null=True, blank=True, db_index=True)
+    deletion_is_root = models.BooleanField(default=False)
+    deletion_job = models.ForeignKey("DeletionJob", null=True, blank=True, on_delete=models.SET_NULL, related_name="%(class)s_deletions")
+    deletion_request_context = models.JSONField(default=dict)
+    deletion_claim_token = models.UUIDField(null=True, blank=True)
+    deletion_claimed_at = models.DateTimeField(null=True, blank=True)
+    deletion_next_attempt_at = models.DateTimeField(null=True, blank=True)
+    deletion_attempts = models.PositiveIntegerField(default=0)
+    deletion_last_error = models.TextField(blank=True, default="")
+
+    class Meta:
+        abstract = True
+
+
 class DiscordAttachmentMixin(models.Model):
     message_id = models.CharField(max_length=19, db_index=True)
     attachment_id = models.CharField(max_length=19, unique=True, db_index=True)

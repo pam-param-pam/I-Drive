@@ -8,29 +8,34 @@ from website.auth.permissions import (
 )
 from website.core.errors import BadRequestError, ResourceNotFoundError
 from website.core.helpers import validate_ids_as_list
-from website.models import File, Folder, NamespaceOperation, DeletionJob, DeletionScope
+from website.models import File, Folder, NamespaceOperation, DeletionJob
 from website.queries.hierarchy import get_descendant_folder_ids, load_folder_hierarchy
 from website.auth.permissions import ResourceType
 from website.services.file_service import FileService
 from website.services.folder_service import FolderService
 from website.services import namespace_lock_service
-from website.auth.permissions.authorizer import authorizer
+from website.auth.permissions.engine import permissions
 
 
 def list_folder_subtree(principal, folder_id, credentials=None):
-    authorizer.require_item(principal, ResourceAction.READ, folder_id, credentials,
+    permissions.authorize(ResourceAction.READ, principal, folder_id, credentials,
                             resource_type=ResourceType.FOLDER)
     folder_ids = sorted(get_descendant_folder_ids([folder_id], include_roots=True))[:1000]
     file_ids = list(File.objects.filter(owner_id=principal.user_id, parent_id__in=folder_ids)
                     .values_list("id", flat=True)[:1000])
-    return tuple(item for item in authorizer.filter_items(
-        principal, ResourceAction.READ, file_ids=file_ids, folder_ids=folder_ids,
-        credentials=credentials,
-    ) if isinstance(item, File))
+    authorized = permissions.authorize(ResourceAction.READ_FILTER, principal, file_ids=file_ids,
+                                        folder_ids=folder_ids, credentials=credentials)
+    return tuple(item.resource for item in authorized.items if isinstance(item.resource, File))
 
 
 def list_trash(principal, credentials=None):
-    rows = authorizer.list_trash(principal)
+    authorized = permissions.authorize(ResourceAction.LIST_TRASH, principal)
+    rows = []
+    for item in authorized.items:
+        row = dict(item.row)
+        row.update(is_locked=item.state.lock_id is not None, lock_from_id=item.state.lock_id,
+                   lock_from_name=item.state.lock_name)
+        rows.append(row)
     return (tuple(row for row in rows if row["kind"] == "file"),
             tuple(row for row in rows if row["kind"] == "folder"))
 
@@ -72,12 +77,12 @@ def validate_same_parent_selection(
 ) -> tuple[ItemRef, ...]:
     """Compatibility wrapper; final mutation locks/checks remain in services."""
     if action == ResourceAction.MOVE:
-        selection = authorizer.require_move(principal, item_ids, destination_id, credentials)[0]
+        selection = permissions.authorize(ResourceAction.MOVE, principal, item_ids, destination_id, credentials).items
     else:
         if destination_id is not None:
             raise BadRequestError("Only move accepts a destination")
-        selection = authorizer.require_selection(principal, action, item_ids, credentials)
-    return tuple(ItemRef(item.type, item.id) for item in selection)
+        selection = permissions.authorize(action, principal, item_ids, credentials).items
+    return tuple(ItemRef(item.row["kind"], item.row["id"]) for item in selection)
 
 
 def move(principal: UserPrincipal, item_ids: list[str], destination_id: str, credentials: CredentialSet):
@@ -128,9 +133,10 @@ def request_deletion(principal: UserPrincipal, item_ids: list[str], credentials:
             raise BadRequestError("A deletion request is already in progress")
         refs = classify_item_ids(principal, item_ids)
         # Authorize every requested item before normalization or recording work.
-        items = authorizer.require_items(principal, ResourceAction.REQUEST_DELETE,
+        authorized = permissions.authorize(ResourceAction.REQUEST_DELETE, principal,
             file_ids=[ref.id for ref in refs if ref.type == "file"],
             folder_ids=[ref.id for ref in refs if ref.type == "folder"], credentials=credentials)
+        items = tuple(item.resource for item in authorized.items)
         selected_folders = {str(item.pk) for item in items if isinstance(item, Folder)}
         _, chains = load_folder_hierarchy({str(item.pk) if isinstance(item, Folder)
                                           else str(item.parent_id) for item in items})
@@ -138,19 +144,16 @@ def request_deletion(principal: UserPrincipal, item_ids: list[str], credentials:
             chains[str(item.pk)][1:] if isinstance(item, Folder) else chains[str(item.parent_id)])]
         job = DeletionJob.objects.create(requested_by_id=principal.user_id, request_context=asdict(principal),
             requested_ids=item_ids, state=DeletionJob.State.RUNNING)
-        results = []
         file_ids = [str(item.pk) for item in normalized if isinstance(item, File)]
-        if file_ids:
-            results.extend(FileService.request_deletion(principal, file_ids, credentials))
-        for item in normalized:
-            if isinstance(item, Folder):
-                results.append(FolderService.request_deletion(principal, str(item.pk), credentials))
-        scopes = DeletionScope.objects.filter(pk__in=[result.operation_id for result in results])
-        job.total_file_items = sum(scope.physical_file_count for scope in scopes)
-        job.total_folder_items = sum(scope.physical_folder_count for scope in scopes)
+        folder_roots = [item for item in normalized if isinstance(item, Folder)]
+        job.total_file_items = len(file_ids) + sum(folder.physical_descendant_file_count for folder in folder_roots)
+        job.total_folder_items = sum(1 + folder.physical_descendant_folder_count for folder in folder_roots)
         job.started_at = job.heartbeat_at = timezone.now()
         job.save(update_fields=["total_file_items", "total_folder_items", "started_at", "heartbeat_at"])
-        scopes.update(job=job)
+        if file_ids:
+            FileService.request_deletion(principal, file_ids, credentials, job=job)
+        for folder in folder_roots:
+            FolderService.request_deletion(principal, str(folder.pk), credentials, job=job)
         return job
 
 

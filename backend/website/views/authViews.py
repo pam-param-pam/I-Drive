@@ -80,7 +80,8 @@ def get_qr_session_view(request):
 @throttle_classes([LoginThrottle])
 @permission_classes([IsAuthenticated])
 def authenticate_qr_session_view(request, session_id):
-    auth_service.authenticate_qr_session(request.user, session_id)
+    long_lived = request.data.get("long_lived", False)
+    auth_service.authenticate_qr_session(request.user, session_id, long_lived=long_lived)
     return HttpResponse(status=204)
 
 

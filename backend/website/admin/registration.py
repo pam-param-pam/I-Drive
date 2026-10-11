@@ -9,9 +9,8 @@ from website.core.crypto.signer import sign_resource
 from website.core.errors import DiscordError
 from website.models import Fragment, Folder, File, UserSettings, UserPerms, ShareableLink, Thumbnail, UserZIP, MediaPosition, Tag, Webhook, Bot, DiscordSettings, Moment, \
     VideoMetadata, VideoTrack, AudioTrack, SubtitleTrack, Subtitle, Channel, ShareAccess, PerDeviceToken, ShareAccessEvent
-from website.models.delete_models import DeletionJob, DeletionFileWorkItem, DeletionFolderWorkItem
+from website.models.delete_models import DeletionJob
 from website.models.namespace_models import (
-    DeletionScope,
     FolderHashWork,
     FolderHeightRepair,
     FolderLockScope,
@@ -450,26 +449,6 @@ class ShareAccessEventAdmin(IDriveModelAdmin):
 @admin.register(Notification)
 class NotificationAdmin(IDriveModelAdmin):
     list_display = ['owner', 'type', 'title', 'message', 'is_read', 'is_deleted']
-
-
-@admin.register(DeletionFileWorkItem)
-class DeletionFileWorkItemAdmin(IDriveModelAdmin):
-    list_display = ['file', 'scope', 'state', 'attempts', 'claimed_at', 'finished_at']
-    list_select_related = ['file', 'scope']
-
-
-@admin.register(DeletionFolderWorkItem)
-class DeletionFolderWorkItemAdmin(IDriveModelAdmin):
-    list_display = ['folder', 'scope', 'state', 'attempts', 'expansion_complete', 'claimed_at', 'finished_at']
-    list_select_related = ['folder', 'scope']
-
-
-@admin.register(DeletionScope)
-class DeletionScopeAdmin(IDriveModelAdmin):
-    ordering = ['-created_at']
-    list_display = ['id', 'owner', 'job', 'root_folder', 'root_file', 'state', 'done_file_count', 'done_folder_count', 'attempts', 'next_attempt_at', 'claimed_at']
-    list_filter = ['state']
-    list_select_related = ['owner', 'job', 'root_folder', 'root_file']
 
 
 @admin.register(DeletionJob)

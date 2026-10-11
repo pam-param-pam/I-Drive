@@ -22,29 +22,31 @@ from website.models import File, Folder, Moment, Subtitle, Thumbnail
 from website.queries.selectors import check_if_bots_exists
 from website.services import attachment_service, cache_service, zip_service
 
-from website.auth.permissions.authorizer import authorizer
+from website.auth.permissions.engine import permissions
 
 
 def iter_download_files(principal, item_id, credentials=None):
-    root = authorizer.require_download_root(principal, item_id, credentials)
+    root_item = permissions.authorize(ResourceAction.DOWNLOAD_TREE_ROOT, principal, item_id, credentials).items[0]
+    root = {**root_item.row, "lock_from_id": root_item.state.lock_id}
     if root["kind"] == "file":
         yield root
         return
     pending, seen = deque([root["id"]]), {root["id"]}
     while pending:
         parent_ids = [pending.popleft() for _ in range(min(len(pending), 500))]
-        parents = authorizer.filter_download_items(
+        parents = permissions.authorize(ResourceAction.DOWNLOAD_TREE_CANDIDATES,
             principal, root["id"], folder_ids=parent_ids, credentials=credentials,
-        )
-        parent_ids = {row["id"] for row in parents}
+        ).items
+        parent_ids = {item.row["id"] for item in parents}
         for model, kind in ((File, "file"), (Folder, "folder")):
             ids = model.objects.filter(owner_id=principal.user_id, parent_id__in=parent_ids).order_by("id").values_list("id", flat=True)
             for batch in batched(ids.iterator(chunk_size=500), 500):
                 selected = {"folder_ids" if kind == "folder" else "file_ids": list(batch)}
-                rows = authorizer.filter_download_items(
+                items = permissions.authorize(ResourceAction.DOWNLOAD_TREE_CANDIDATES,
                     principal, root["id"], parent_ids=parent_ids, credentials=credentials, **selected,
-                )
-                for row in rows:
+                ).items
+                for item in items:
+                    row = {**item.row, "lock_from_id": item.state.lock_id}
                     if kind == "file":
                         yield row
                     elif row["id"] not in seen:
@@ -54,7 +56,7 @@ def iter_download_files(principal, item_id, credentials=None):
 
 def _authorized_signed_file(principal: SignedResourcePrincipal, *, for_zip: bool = False) -> File:
     action = ResourceAction.STREAM_ZIP_ENTRY if for_zip else ResourceAction.STREAM_FILE
-    return authorizer.require_signed_file(principal, action)
+    return permissions.authorize(action, principal).items[0].resource
 
 
 def _stable_file_etag(file_obj: File) -> str:
@@ -64,13 +66,13 @@ def _stable_file_etag(file_obj: File) -> str:
 
 def get_thumbnail_response(request, principal: SignedResourcePrincipal, thumbnail_id: str):
     isInline = validate_key(request.GET, "inline", bool, default=False, converter=param_to_bool)
-    file_obj = authorizer.require_signed_file(principal, ResourceAction.STREAM_THUMBNAIL)
+    file_obj = permissions.authorize(ResourceAction.STREAM_THUMBNAIL, principal).items[0].resource
     try:
         thumbnail = Thumbnail.objects.get(id=thumbnail_id, file_id=file_obj.id)
     except Thumbnail.DoesNotExist as exception:
         raise ResourceNotFoundError() from exception
 
-    cache_key = cache_service.get_thumbnail_key(file_obj.id, file_obj.resource_version)
+    cache_key = cache_service.get_thumbnail_key(file_obj.id)
     thumbnail_content = cache.get(cache_key)
 
     check_if_bots_exists(file_obj.owner)
@@ -170,7 +172,10 @@ def get_file_response(request, principal: SignedResourcePrincipal):
 
 
 def get_zip_response(request, principal: SignedResourcePrincipal):
-    user_zip, roots, scope = authorizer.require_signed_zip(principal)
+    authorized = permissions.authorize(ResourceAction.STREAM_ZIP, principal)
+    user_zip = authorized.data["record"]
+    roots = tuple(item.row for item in authorized.items)
+    scope = authorized.data["scope"]
     user = get_user_model().objects.filter(id=user_zip.owner_id).first()
     if user is None:
         raise ResourceNotFoundError()

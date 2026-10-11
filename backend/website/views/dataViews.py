@@ -25,7 +25,8 @@ from website.queries.builders import build_breadcrumbs, build_file_path
 from website.queries.selectors import check_if_bots_exists
 from website.services import attachment_service
 from website.services import search_service
-from website.auth.permissions.authorizer import authorizer
+from website.auth.permissions.engine import permissions
+from website.queries.listing import load_entries
 from website.services import namespace_service
 
 
@@ -37,7 +38,7 @@ def _inputs(request):
 @throttle_classes([defaultAuthUserThrottle])
 def get_folder_info(request, folder_id):
     principal, credentials = _inputs(request)
-    folder_obj = authorizer.require_item(principal, ResourceAction.READ, folder_id, credentials, resource_type=ResourceType.FOLDER)
+    folder_obj = permissions.authorize(ResourceAction.READ, principal, folder_id, credentials, resource_type=ResourceType.FOLDER).items[0].resource
     breadcrumbs = build_breadcrumbs(folder_obj)
 
     unsigned_payload = {
@@ -59,7 +60,8 @@ def get_folder_info(request, folder_id):
 
         return response
 
-    children = authorizer.list_children(principal, folder_id, credentials)
+    authorized = permissions.authorize(ResourceAction.READ_CHILDREN, principal, folder_id, credentials)
+    children = load_entries(authorized.root[0].row, authorized.root[0].state)
     folder_content = FolderSerializer.serialize_dict(load_folder_display(folder_obj.id, folder_obj.owner_id))
     folder_rows = {str(row["id"]): row for row in load_folder_displays(
         child for child in children if isinstance(child, Folder)
@@ -105,7 +107,7 @@ def get_folder_info(request, folder_id):
 @permission_classes([IsAuthenticated])
 def get_file_info(request, file_id):
     principal, credentials = _inputs(request)
-    file_obj = authorizer.require_item(principal, ResourceAction.DOWNLOAD, file_id, credentials, resource_type=ResourceType.FILE)
+    file_obj = permissions.authorize(ResourceAction.DOWNLOAD_SELECTED, principal, file_id, credentials, resource_type=ResourceType.FILE).items[0].resource
     file_content = FileSerializer.serialize_dict(load_file_display(file_obj.id, file_obj.owner_id))
     return JsonResponse(file_content)
 
@@ -116,7 +118,7 @@ def get_file_info(request, file_id):
 @vary_on_headers("x-resource-password")
 def get_usage(request, folder_id):
     principal, credentials = _inputs(request)
-    folder_obj = authorizer.require_item(principal, ResourceAction.READ, folder_id, credentials, resource_type=ResourceType.FOLDER)
+    folder_obj = permissions.authorize(ResourceAction.READ, principal, folder_id, credentials, resource_type=ResourceType.FOLDER).items[0].resource
     root = folder_obj if folder_obj.parent_id is None else Folder.objects.only("visible_descendant_file_size").get(owner_id=principal.user_id, parent__isnull=True)
     return JsonResponse({
         "total": root.visible_descendant_file_size,
@@ -129,7 +131,7 @@ def get_usage(request, folder_id):
 @permission_classes([IsAuthenticated])
 def fetch_additional_info(request, file_id):
     principal, credentials = _inputs(request)
-    item_obj = authorizer.require_item(principal, ResourceAction.READ_FILE_METADATA, file_id, credentials, resource_type=ResourceType.FILE)
+    item_obj = permissions.authorize(ResourceAction.READ_FILE_METADATA, principal, file_id, credentials, resource_type=ResourceType.FILE).items[0].resource
 
     if item_obj.type == "Video":
         tracks = []
@@ -201,7 +203,7 @@ def get_trash(request):
 def check_password(request, item_id):
     principal, credentials = _inputs(request)
     try:
-        authorizer.require_item(principal, ResourceAction.VERIFY_LOCK_CREDENTIAL, item_id, credentials)
+        permissions.authorize(ResourceAction.VERIFY_LOCK_CREDENTIAL, principal, item_id, credentials)
     except PermissionPasswordError as exception:
         raise ResourcePermissionError("Password is incorrect") from exception
     return HttpResponse(status=204)
@@ -212,7 +214,7 @@ def check_password(request, item_id):
 @permission_classes([IsAuthenticated])
 def get_moments(request, file_id):
     principal, credentials = _inputs(request)
-    file_obj = authorizer.require_item(principal, ResourceAction.DOWNLOAD, file_id, credentials, resource_type=ResourceType.FILE)
+    file_obj = permissions.authorize(ResourceAction.DOWNLOAD_SELECTED, principal, file_id, credentials, resource_type=ResourceType.FILE).items[0].resource
     moments = Moment.objects.filter(file=file_obj).all()
     return JsonResponse(MomentSerializer.serialize_objects(moments), safe=False)
 
@@ -222,7 +224,7 @@ def get_moments(request, file_id):
 @permission_classes([IsAuthenticated])
 def get_tags(request, file_id):
     principal, credentials = _inputs(request)
-    file_obj = authorizer.require_item(principal, ResourceAction.READ, file_id, credentials, resource_type=ResourceType.FILE)
+    file_obj = permissions.authorize(ResourceAction.READ, principal, file_id, credentials, resource_type=ResourceType.FILE).items[0].resource
     return JsonResponse(TagSerializer.serialize_objects(file_obj.tags.all()), safe=False)
 
 
@@ -231,7 +233,7 @@ def get_tags(request, file_id):
 @permission_classes([IsAuthenticated])
 def get_subtitles(request, file_id):
     principal, credentials = _inputs(request)
-    file_obj = authorizer.require_item(principal, ResourceAction.DOWNLOAD, file_id, credentials, resource_type=ResourceType.FILE)
+    file_obj = permissions.authorize(ResourceAction.DOWNLOAD_SELECTED, principal, file_id, credentials, resource_type=ResourceType.FILE).items[0].resource
     subtitles = Subtitle.objects.filter(file=file_obj)
     return JsonResponse(SubtitleSerializer.serialize_objects(subtitles), safe=False)
 
@@ -255,7 +257,7 @@ def get_files_media_position(request):
     validate_ids_as_list(ids, max_length=100)
 
     principal, credentials = _inputs(request)
-    files = authorizer.require_items(principal, ResourceAction.READ, file_ids=ids, credentials=credentials)
+    files = tuple(item.resource for item in permissions.authorize(ResourceAction.READ, principal, file_ids=ids, credentials=credentials).items)
     item_ids = [file.id for file in files]
 
     media_positions = MediaPosition.objects.filter(file_id__in=item_ids).values_list("timestamp", "modified_at", "file_id")
@@ -301,11 +303,11 @@ def ultra_download_files_metadata(request, item_id):
 @permission_classes([IsAuthenticated])
 def ultra_download_file_fragments_metadata(request, file_id):
     principal, credentials = _inputs(request)
-    file_obj = authorizer.require_item(principal, ResourceAction.DOWNLOAD, file_id, credentials, resource_type=ResourceType.FILE)
+    file_obj = permissions.authorize(ResourceAction.DOWNLOAD_SELECTED, principal, file_id, credentials, resource_type=ResourceType.FILE).items[0].resource
     folder_id = request.GET.get("folder_id")
     folder_obj = None
     if folder_id:
-        folder_obj = authorizer.require_item(principal, ResourceAction.DOWNLOAD, folder_id, credentials, resource_type=ResourceType.FOLDER)
+        folder_obj = permissions.authorize(ResourceAction.DOWNLOAD_SELECTED, principal, folder_id, credentials, resource_type=ResourceType.FOLDER).items[0].resource
     fragments = (
         Fragment.objects
         .filter(file_id=file_obj.id)
@@ -344,7 +346,7 @@ def ultra_download_file_fragments_metadata(request, file_id):
 def get_fragment_url_view(request, fragment_id):
     principal, credentials = _inputs(request)
     fragment = Fragment.objects.select_related("file").get(id=fragment_id, file__owner_id=principal.user_id)
-    file = authorizer.require_item(principal, ResourceAction.DOWNLOAD, str(fragment.file_id), credentials, resource_type=ResourceType.FILE)
+    file = permissions.authorize(ResourceAction.DOWNLOAD_SELECTED, principal, str(fragment.file_id), credentials, resource_type=ResourceType.FILE).items[0].resource
     check_if_bots_exists(request.user)
 
     url = attachment_service.get_attachment_url(request.user, fragment, file)
@@ -356,13 +358,11 @@ def get_fragment_url_view(request, fragment_id):
 @permission_classes([IsAuthenticated])
 def get_folder_file_stats(request, folder_id):
     principal, credentials = _inputs(request)
-    folder = authorizer.require_item(principal, ResourceAction.READ, folder_id, credentials,
-                                     resource_type=ResourceType.FOLDER)
-    # Physical totals include trash and pending deletion, matching physical_file_stats.
+    folder = permissions.authorize(ResourceAction.READ, principal, folder_id, credentials,
+                                   resource_type=ResourceType.FOLDER).items[0].resource
     result = {file_type: {"count": bucket["count"], "total_size": bucket["size"]}
-              for file_type, bucket in sorted(folder.physical_file_stats.items())}
-
-    return JsonResponse(result, safe=False)
+              for file_type, bucket in sorted(folder.visible_file_stats.items())}
+    return JsonResponse(result)
 
 
 @api_view(["GET"])
@@ -370,7 +370,7 @@ def get_folder_file_stats(request, folder_id):
 @permission_classes([IsAuthenticated])
 def get_folder_hash(request, folder_id):
     principal, credentials = _inputs(request)
-    folder_obj = authorizer.require_item(principal, ResourceAction.READ, folder_id, credentials, resource_type=ResourceType.FOLDER)
+    folder_obj = permissions.authorize(ResourceAction.READ, principal, folder_id, credentials, resource_type=ResourceType.FOLDER).items[0].resource
     if folder_obj.subtree_hash is None or folder_obj.hash_input_generation != folder_obj.hash_computed_generation:
         FolderHashWork.objects.get_or_create(folder_id=folder_obj.id)
         return JsonResponse({"status": "pending"}, status=202)

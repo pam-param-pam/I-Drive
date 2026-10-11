@@ -46,7 +46,7 @@ def _create_token(request, user: User) -> tuple[str, PerDeviceToken]:
     return _create_token_internal(user, metadata)
 
 
-def authenticate_qr_session(user: User, session_id) -> None:
+def authenticate_qr_session(user: User, session_id, long_lived: bool = False) -> None:
     key = cache_service.get_qr_session_key(session_id)
     session_json = cache.get(key)
 
@@ -56,7 +56,8 @@ def authenticate_qr_session(user: User, session_id) -> None:
     session_data = json.loads(session_json)
 
     desktop_user = user
-    raw_token, token_obj = _create_token_internal(desktop_user, session_data)
+    token_expiry = datetime.timedelta(days=TOKEN_EXPIRY_DAYS) if long_lived else datetime.timedelta(seconds=QR_CODE_SHORT_TOKEN_EXPIRY)
+    raw_token, token_obj = _create_token_internal(desktop_user, session_data, token_expiry)
 
     cache.delete(key)
 

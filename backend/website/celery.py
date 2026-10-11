@@ -31,10 +31,10 @@ def setup_periodic_tasks(sender, **kwargs):
         from website.tasks.cleanupDatabaseTasks import cleanup_user_db
         from website.tasks.derivedStateTasks import process_folder_hash_work, process_folder_height_repairs
         from website.tasks.namespaceTasks import recover_namespace_operations
-        from website.tasks.deletion.workflow import recover_deletion_scopes
+        from website.tasks.deletion.workflow import recover_deletion_roots
 
         sender.add_periodic_task(
-            timedelta(seconds=15), recover_deletion_scopes.s(), name="recover-deletion-scopes",
+            timedelta(seconds=15), recover_deletion_roots.s(), name="recover-deletion-roots",
         )
 
         sender.add_periodic_task(

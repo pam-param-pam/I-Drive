@@ -17,7 +17,7 @@ from website.models import Channel, Folder, UserSettings, UserPerms, DiscordSett
 from website.models.other_models import Notification, NotificationType
 from website.queries.builders import build_discord_settings
 from website.services import user_service
-from website.auth.permissions.authorizer import authorizer
+from website.auth.permissions.engine import permissions
 
 
 def _principal(request):
@@ -29,10 +29,9 @@ def _principal(request):
 @permission_classes([IsAuthenticated])
 def can_upload(request, folder_id):
     principal = _principal(request)
-    folder_obj = authorizer.require_item(
-        principal, ResourceAction.CREATE_CHILD, folder_id, extract_resource_credentials(request),
+    folder_obj = permissions.authorize(ResourceAction.CREATE_CHILD, principal, folder_id, extract_resource_credentials(request),
         resource_type=ResourceType.FOLDER,
-    )
+    ).items[0].resource
     discordSettings = request.user.discordsettings
     channels = Channel.objects.filter(owner=request.user)
 

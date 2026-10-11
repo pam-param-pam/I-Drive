@@ -163,8 +163,9 @@ export async function handleResourceURLExpiredIfNeeded(error) {
    }
 
    const errorMessage = error.response?.data?.error
+   const errorDetails = error.response?.data?.details
 
-   if (errorMessage === "errors.urlInvalidOrExpired") {
+   if (errorMessage === "errors.urlInvalidOrExpired" || errorDetails === "URL invalid or expired") {
       const key = "lastResourceUrlReload"
       const now = Date.now()
       const lastReload = Number(localStorage.getItem(key) || 0)

@@ -3,7 +3,8 @@ from typing import Iterable
 
 from website.config import MAX_FOLDER_DEPTH
 from website.core.errors import BadRequestError, ConcurrentModificationError, MalformedDatabaseState, ResourceNotFoundError, ResourcePermissionError
-from website.models import DeletionScope, Folder
+from website.models import File, Folder
+from website.models.mixin_models import ItemState
 from website.queries.hierarchy import load_folder_hierarchy
 
 
@@ -56,21 +57,16 @@ def assert_move_depth(destination_depth: int, source_height_bound: int) -> None:
         raise BadRequestError(f"Folder depth exceeded. Max = {MAX_FOLDER_DEPTH}")
 
 
-def assert_no_active_scope_in_subtree(owner_id: int, folder_id: str) -> None:
-    roots = list(
-        DeletionScope.objects.filter(
-            owner_id=owner_id,
-            state=DeletionScope.State.ACTIVE,
-            root_folder_id__isnull=False,
-        ).values_list("root_folder_id", flat=True)
-    )
-    file_parents = DeletionScope.objects.filter(owner_id=owner_id, state=DeletionScope.State.ACTIVE,
-        root_file_id__isnull=False).values_list("root_file__parent_id", flat=True)
+def assert_no_active_deletion_in_subtree(owner_id: int, folder_id: str) -> None:
+    roots = Folder.objects.filter(owner_id=owner_id, state=ItemState.DELETING,
+                                  deletion_is_root=True).values_list("id", flat=True)
+    file_parents = File.objects.filter(owner_id=owner_id, state=ItemState.DELETING,
+                                       deletion_is_root=True).values_list("parent_id", flat=True)
     pending = {str(value) for value in (*roots, *file_parents)}
     seen: set[str] = set()
     for _ in range(MAX_FOLDER_DEPTH + 2):
         if str(folder_id) in pending:
-            raise ResourcePermissionError("Operation overlaps an active deletion scope")
+            raise ResourcePermissionError("Operation overlaps an active deletion")
         pending -= seen
         if not pending:
             return

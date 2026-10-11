@@ -52,7 +52,7 @@ def apply_file_stats_deltas(deltas):
     folders = list(Folder.objects.filter(id__in=deltas).order_by("id"))
     valid_types = {choice[0] for choice in FILE_TYPE_CHOICES}
     for folder in folders:
-        stats = folder.physical_file_stats
+        stats = folder.visible_file_stats
         for file_type, values in deltas[str(folder.id)].items():
             if file_type not in valid_types:
                 raise ValueError(f"Invalid file type: {file_type}")
@@ -65,11 +65,11 @@ def apply_file_stats_deltas(deltas):
                 if bucket["size"] != 0:
                     raise ValueError("Nonzero size for an empty file bucket")
                 del stats[file_type]
-        if (sum(value["count"] for value in stats.values()) != folder.physical_descendant_file_count
-                or sum(value["size"] for value in stats.values()) != folder.physical_descendant_file_size):
-            raise ValueError("File statistics do not match physical counters")
+        if (sum(value["count"] for value in stats.values()) != folder.visible_descendant_file_count
+                or sum(value["size"] for value in stats.values()) != folder.visible_descendant_file_size):
+            raise ValueError("File statistics do not match visible counters")
     if folders:
-        Folder.objects.bulk_update(folders, ["physical_file_stats"])
+        Folder.objects.bulk_update(folders, ["visible_file_stats"])
 
 
 def change_file_stats(chain, file_type, count=0, size=0):

@@ -1,4 +1,5 @@
 from dataclasses import asdict, dataclass
+import uuid
 from django.contrib.auth.models import User
 from django.db import transaction
 from django.utils import timezone
@@ -11,7 +12,7 @@ from website.core.http.context import RequestContext
 from website.core.errors import BadRequestError, ConcurrentModificationError, ResourcePermissionError
 from website.core.helpers import validate_value
 from website.core.validators.GeneralChecks import IsValidItemName, NotEmpty
-from website.models import (DeletionFolderWorkItem, DeletionScope, Folder, FolderLockScope)
+from website.models import Folder, FolderLockScope
 from website.models.mixin_models import ItemState
 from website.auth.permissions import (
     CredentialSet, ResourceAction, ResourceType,
@@ -23,9 +24,9 @@ from website.services.derived_state_service import (
     dirty_hashes, enqueue_height_repair, merge_delta, raise_height_bounds)
 from website.services.hierarchy_service import (
     assert_move_depth, assert_move_has_no_cycle,
-    assert_no_active_scope_in_subtree, lock_folder_chains)
+    assert_no_active_deletion_in_subtree, lock_folder_chains)
 from website.websockets.utils import send_event
-from website.auth.permissions.authorizer import authorizer
+from website.auth.permissions.engine import permissions
 
 
 @dataclass(frozen=True)
@@ -59,8 +60,7 @@ class FolderService:
             namespace_lock_service.lock_owner_scope_shared(owner_id)
             hierarchy = lock_folder_chains(owner_id, [parent_id])
             parent = hierarchy.folders[str(parent_id)]
-            authorizer.require_item(
-                principal, ResourceAction.CREATE_CHILD, parent_id, credentials,
+            permissions.authorize(ResourceAction.CREATE_CHILD, principal, parent_id, credentials,
                 resource_type=ResourceType.FOLDER, locked_hierarchy=hierarchy,
             )
 
@@ -91,8 +91,7 @@ class FolderService:
             namespace_lock_service.lock_owner_scope_shared(owner_id)
             hierarchy = lock_folder_chains(owner_id, [folder_id])
             folder = hierarchy.folders[str(folder_id)]
-            authorizer.require_item(
-                principal, ResourceAction.RENAME, folder_id, credentials,
+            permissions.authorize(ResourceAction.RENAME, principal, folder_id, credentials,
                 resource_type=ResourceType.FOLDER, locked_hierarchy=hierarchy,
             )
 
@@ -101,30 +100,16 @@ class FolderService:
             dirty_hashes(hierarchy.chain(str(folder.id))[1:])
             bump_folder_listings([folder.parent_id])
             folder.refresh_from_db(fields=["resource_version"])
-            send_event(RequestContext.from_user(owner_id), hierarchy.folders.get(str(folder.parent_id)), EventCode.ITEM_UPDATE,
+            send_event(RequestContext.from_user(owner_id), hierarchy.folders[str(folder.parent_id)], EventCode.ITEM_UPDATE,
                        FolderSerializer.serialize_dict(load_folder_display(folder.id, owner_id)))
             return FolderCommandResult(str(folder.id), folder.resource_version)
-
-    @staticmethod
-    def move(principal: UserPrincipal, folder_id: str, destination_id: str, credentials: CredentialSet | None = None) -> FolderCommandResult:
-        owner_id = principal.user_id
-        with transaction.atomic():
-            namespace_lock_service.lock_owner_scope_shared(owner_id)
-            hierarchy = lock_folder_chains(owner_id, [folder_id, destination_id])
-            folder = hierarchy.folders[str(folder_id)]
-            destination = hierarchy.folders[str(destination_id)]
-            authorizer.require_move_items(
-                principal, destination_id, folder_ids=[folder_id],
-                credentials=credentials, locked_hierarchy=hierarchy,
-            )
-            return FolderService._move_locked(owner_id, hierarchy, folder, destination)
 
     @staticmethod
     def _move_locked(owner_id, hierarchy, folder, destination):
         namespace_lock_service._require_transaction()
         if str(folder.parent_id) == str(destination.id):
             return FolderCommandResult(str(folder.id), folder.resource_version)
-        assert_no_active_scope_in_subtree(owner_id, str(folder.id))
+        assert_no_active_deletion_in_subtree(owner_id, str(folder.id))
         destination_chain = hierarchy.chain(str(destination.id))
         assert_move_has_no_cycle(str(folder.id), destination_chain)
         assert_move_depth(hierarchy.depth(str(destination.id)), folder.subtree_height_bound)
@@ -162,8 +147,8 @@ class FolderService:
         Folder.objects.filter(id=folder.id).update(parent_id=destination.id, last_modified_at=timezone.now())
         apply_counter_deltas(deltas)
         stats = {}
-        merge_file_stats(stats, old_ancestors, folder.physical_file_stats, -1)
-        merge_file_stats(stats, new_ancestors, folder.physical_file_stats)
+        merge_file_stats(stats, old_ancestors, folder.visible_file_stats, -1)
+        merge_file_stats(stats, new_ancestors, folder.visible_file_stats)
         apply_file_stats_deltas(stats)
         raise_height_bounds(new_ancestors, folder.subtree_height_bound, hierarchy.folders)
         enqueue_height_repair(old_parent_id)
@@ -178,22 +163,9 @@ class FolderService:
         return FolderCommandResult(str(folder.id), folder.resource_version)
 
     @staticmethod
-    def trash(principal: UserPrincipal, folder_id: str, credentials: CredentialSet | None = None) -> FolderCommandResult:
-        owner_id = principal.user_id
-        with transaction.atomic():
-            namespace_lock_service.lock_owner_scope_shared(owner_id)
-            hierarchy = lock_folder_chains(owner_id, [folder_id])
-            folder = hierarchy.folders[str(folder_id)]
-            authorizer.require_item(
-                principal, ResourceAction.TRASH, folder_id, credentials,
-                resource_type=ResourceType.FOLDER, locked_hierarchy=hierarchy,
-            )
-            return FolderService._trash_locked(owner_id, hierarchy, folder)
-
-    @staticmethod
     def _trash_locked(owner_id, hierarchy, folder):
         namespace_lock_service._require_transaction()
-        assert_no_active_scope_in_subtree(owner_id, str(folder.id))
+        assert_no_active_deletion_in_subtree(owner_id, str(folder.id))
 
         folder.trashed_at = timezone.now()
         folder.save(update_fields=["trashed_at"])
@@ -207,27 +179,16 @@ class FolderService:
             visible_descendant_file_size=-folder.visible_descendant_file_size,
         )
         apply_counter_deltas(deltas)
+        stats = {}
+        merge_file_stats(stats, outside, folder.visible_file_stats, -1)
+        apply_file_stats_deltas(stats)
         dirty_hashes(outside)
         bump_folder_resources([folder.id])
         bump_folder_listings([folder.parent_id])
         folder.refresh_from_db(fields=["resource_version"])
-        send_event(RequestContext.from_user(owner_id), hierarchy.folders.get(str(folder.parent_id)),
+        send_event(RequestContext.from_user(owner_id), hierarchy.folders[str(folder.parent_id)],
                    EventCode.ITEM_MOVE_TO_TRASH, FolderSerializer.serialize_dict(load_folder_display(folder.id, folder.owner_id)))
         return FolderCommandResult(str(folder.id), folder.resource_version)
-
-    @staticmethod
-    def restore(principal: UserPrincipal, folder_id: str, credentials: CredentialSet | None = None) -> FolderCommandResult:
-        owner_id = principal.user_id
-        with transaction.atomic():
-            namespace_lock_service.lock_owner_scope_shared(owner_id)
-            hierarchy = lock_folder_chains(owner_id, [folder_id])
-            folder = hierarchy.folders[str(folder_id)]
-            authorizer.require_item(
-                principal, ResourceAction.RESTORE, folder_id, credentials,
-                resource_type=ResourceType.FOLDER, locked_hierarchy=hierarchy,
-            )
-
-            return FolderService._restore_locked(owner_id, hierarchy, folder)
 
     @staticmethod
     def _restore_locked(owner_id, hierarchy, folder):
@@ -246,11 +207,14 @@ class FolderService:
             visible_descendant_file_size=folder.visible_descendant_file_size,
         )
         apply_counter_deltas(deltas)
+        stats = {}
+        merge_file_stats(stats, outside, folder.visible_file_stats)
+        apply_file_stats_deltas(stats)
         dirty_hashes(outside)
         bump_folder_resources([folder.id])
         bump_folder_listings([folder.parent_id])
         folder.refresh_from_db(fields=["resource_version"])
-        send_event(RequestContext.from_user(owner_id), hierarchy.folders.get(str(folder.parent_id)),
+        send_event(RequestContext.from_user(owner_id), hierarchy.folders[str(folder.parent_id)],
                    EventCode.ITEM_RESTORE_FROM_TRASH, FolderSerializer.serialize_dict(load_folder_display(folder.id, folder.owner_id)))
         return FolderCommandResult(str(folder.id), folder.resource_version)
 
@@ -262,8 +226,7 @@ class FolderService:
             namespace_lock_service.lock_owner_scope_shared(owner_id)
             hierarchy = lock_folder_chains(owner_id, [folder_id])
             folder = hierarchy.folders[str(folder_id)]
-            authorizer.require_item(
-                principal, ResourceAction.MANAGE_LOCK, folder_id, credentials,
+            permissions.authorize(ResourceAction.MANAGE_LOCK, principal, folder_id, credentials,
                 resource_type=ResourceType.FOLDER, locked_hierarchy=hierarchy,
             )
             FolderLockScope.objects.update_or_create(
@@ -273,7 +236,7 @@ class FolderService:
             bump_folder_resources([folder.id])
             bump_folder_listings([folder.parent_id])
             folder.refresh_from_db(fields=["resource_version"])
-            send_event(RequestContext.from_user(owner_id), hierarchy.folders.get(str(folder.parent_id)),
+            send_event(RequestContext.from_user(owner_id), hierarchy.folders[str(folder.parent_id)],
                        EventCode.FOLDER_LOCK_STATUS_CHANGE,
                        {"parent_id": str(folder.parent_id), "id": str(folder.id), "isLocked": True,
                         "lockFrom": str(folder.id)})
@@ -309,8 +272,7 @@ class FolderService:
             namespace_lock_service.lock_owner_scope_shared(owner_id)
             hierarchy = lock_folder_chains(owner_id, [folder_id])
             folder = hierarchy.folders[folder_id]
-            authorizer.require_item(
-                principal, action, folder_id, credentials,
+            permissions.authorize(action, principal, folder_id, credentials,
                 resource_type=ResourceType.FOLDER, locked_hierarchy=hierarchy,
             )
             if not FolderLockScope.objects.filter(folder_id=folder.id, owner_id=owner_id).exists():
@@ -332,41 +294,33 @@ class FolderService:
             ).values_list("folder_id", flat=True))
             inherited_lock_id = next((str(folder_id) for folder_id in ancestor_ids if folder_id in inherited_policies), None)
             effective_lock_id = str(folder.id) if replacement_password else inherited_lock_id
-            send_event(RequestContext.from_user(owner_id), hierarchy.folders.get(str(folder.parent_id)),
+            send_event(RequestContext.from_user(owner_id), hierarchy.folders[str(folder.parent_id)],
                        EventCode.FOLDER_LOCK_STATUS_CHANGE,
                        {"parent_id": str(folder.parent_id), "id": str(folder.id),
                         "isLocked": effective_lock_id is not None, "lockFrom": effective_lock_id})
             return FolderCommandResult(str(folder.id), folder.resource_version)
 
     @staticmethod
-    def request_deletion(principal: UserPrincipal, folder_id: str, credentials: CredentialSet | None = None) -> FolderCommandResult:
+    def request_deletion(principal: UserPrincipal, folder_id: str, credentials: CredentialSet | None = None, job=None) -> FolderCommandResult:
         owner_id = principal.user_id
         with transaction.atomic():
             namespace_lock_service.lock_owner_scope_exclusive(owner_id)
             hierarchy = lock_folder_chains(owner_id, [folder_id])
             folder = hierarchy.folders[str(folder_id)]
-            authorizer.require_item(
-                principal, ResourceAction.REQUEST_DELETE, folder_id, credentials,
+            permissions.authorize(ResourceAction.REQUEST_DELETE, principal, folder_id, credentials,
                 resource_type=ResourceType.FOLDER, locked_hierarchy=hierarchy,
             )
-            assert_no_active_scope_in_subtree(owner_id, str(folder.id))
+            assert_no_active_deletion_in_subtree(owner_id, str(folder.id))
 
             visible = folder.trashed_at is None
-            scope = DeletionScope.objects.create(
-                owner_id=owner_id,
-                root_folder_id=folder.id,
-                request_context=asdict(principal),
-                physical_folder_count=1 + folder.physical_descendant_folder_count,
-                physical_file_count=folder.physical_descendant_file_count,
-                physical_file_size=folder.physical_descendant_file_size,
-                visible_folder_count=(1 + folder.visible_descendant_folder_count) if visible else 0,
-                visible_file_count=folder.visible_descendant_file_count if visible else 0,
-                visible_file_size=folder.visible_descendant_file_size if visible else 0,
+            operation_id = uuid.uuid4()
+            from website.tasks.deletion.workflow import publish_deletion_root
+            transaction.on_commit(lambda: publish_deletion_root("folder", str(folder.id)), robust=True)
+            Folder.objects.filter(id=folder.id).update(
+                state=ItemState.DELETING, state_changed_at=timezone.now(),
+                deletion_operation_id=operation_id, deletion_is_root=True,
+                deletion_job=job, deletion_request_context=asdict(principal),
             )
-            DeletionFolderWorkItem.objects.create(scope=scope, folder_id=folder.id)
-            from website.tasks.deletion.workflow import publish_deletion_scope
-            transaction.on_commit(lambda: publish_deletion_scope(scope.pk), robust=True)
-            Folder.objects.filter(id=folder.id).update(state=ItemState.DELETING, state_changed_at=timezone.now())
 
             outside = hierarchy.chain(str(folder.id))[1:]
             if visible:
@@ -374,17 +328,20 @@ class FolderService:
                 merge_delta(
                     deltas,
                     outside,
-                    visible_descendant_folder_count=-scope.visible_folder_count,
-                    visible_descendant_file_count=-scope.visible_file_count,
-                    visible_descendant_file_size=-scope.visible_file_size,
+                    visible_descendant_folder_count=-(1 + folder.visible_descendant_folder_count),
+                    visible_descendant_file_count=-folder.visible_descendant_file_count,
+                    visible_descendant_file_size=-folder.visible_descendant_file_size,
                 )
                 apply_counter_deltas(deltas)
+                stats = {}
+                merge_file_stats(stats, outside, folder.visible_file_stats, -1)
+                apply_file_stats_deltas(stats)
                 dirty_hashes(outside)
             bump_folder_resources([folder.id])
             bump_folder_listings([folder.parent_id])
             folder.refresh_from_db(fields=["resource_version"])
             send_event(RequestContext.from_user(owner_id), None, EventCode.ITEM_DELETE, [str(folder.id)])
-            return FolderCommandResult(str(folder.id), folder.resource_version, str(scope.id))
+            return FolderCommandResult(str(folder.id), folder.resource_version, str(operation_id))
 
 
 folder_service = FolderService()

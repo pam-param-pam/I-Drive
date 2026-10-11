@@ -5,7 +5,9 @@
       </div>
 
       <div v-if="loaded && !isEmpty" class="card-content">
-         <PieChart :data="stats" :options="options" />
+         <div class="file-stats-chart">
+            <PieChart :data="stats" :options="options" />
+         </div>
       </div>
       <div v-else-if="loaded" class="card-content">
          {{$t('prompts.noFileStats')}}
@@ -45,7 +47,6 @@ export default {
    components: { PieChart: Pie },
    data() {
       return {
-         stats: null,
          rawStats: null,
          loaded: false,
          options: {
@@ -76,21 +77,25 @@ export default {
       ...mapState(useMainStore, ["currentFolder"]),
       isEmpty() {
          return Object.keys(this.rawStats).length === 0
+      },
+      stats() {
+         const values = Object.values(this.rawStats)
+         const useCounts = values.some(item => item.count > 0 && item.total_size === 0)
+         return {
+            labels: Object.keys(this.rawStats),
+            datasets: [
+               {
+                  label: "File stats",
+                  data: values.map(item => useCounts ? item.count : item.total_size),
+                  backgroundColor: ["#FF6384", "#36A2EB", "#FFCE56", "#4BC0C0", "#9966FF", "#FF9F40", "#C9CBCF", "#8BC34A", "#E91E63",
+                     "#00BCD4", "#F44336", "#3F51B5", "#CDDC39", "#9C27B0", "#795548", "#607D8B", "#009688"]
+               }
+            ]
+         }
       }
    },
    async created() {
       this.rawStats = await getFileStats(this.currentFolder.id)
-      this.stats = {
-         labels: Object.keys(this.rawStats),
-         datasets: [
-            {
-               label: "File stats",
-               data: Object.values(this.rawStats).map(item => item.total_size),
-               backgroundColor: ["#FF6384", "#36A2EB", "#FFCE56", "#4BC0C0", "#9966FF", "#FF9F40", "#C9CBCF", "#8BC34A", "#E91E63",
-                  "#00BCD4", "#F44336", "#3F51B5", "#CDDC39", "#9C27B0", "#795548", "#607D8B", "#009688"]
-            }
-         ]
-      }
       this.loaded = true
    },
    methods: {
@@ -98,3 +103,11 @@ export default {
    }
 }
 </script>
+
+<style scoped>
+.file-stats-chart {
+   position: relative;
+   width: 100%;
+   height: 280px;
+}
+</style>

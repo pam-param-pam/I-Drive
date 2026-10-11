@@ -10,7 +10,7 @@ from website.core.http.utils import build_response
 from website.services import namespace_service, zip_service
 from website.services.file_service import FileService
 from website.services.folder_service import FolderService
-from website.auth.permissions.authorizer import authorizer
+from website.auth.permissions.engine import permissions
 from website.services.thumbnail_service import ThumbnailService
 
 
@@ -25,8 +25,8 @@ def create_folder_view(request):
     principal, credentials = _inputs(request)
     parent_id = str(extract_key(request.data, "parent_id"))
     name = extract_key(request.data, "name")
-    FolderService.create(principal, parent_id, name, credentials)
-    return HttpResponse(status=200)
+    folder = FolderService.create(principal, parent_id, name, credentials)
+    return JsonResponse({"id": folder.folder_id})
 
 
 @api_view(["PATCH"])
@@ -155,7 +155,7 @@ def remove_tag_view(request, file_id, tag_id):
 @permission_classes([IsAuthenticated])
 def add_moment_view(request, file_id):
     principal, credentials = _inputs(request)
-    authorizer.require_item(principal, ResourceAction.DOWNLOAD, file_id, credentials, resource_type=ResourceType.FILE)
+    permissions.authorize(ResourceAction.DOWNLOAD_SELECTED, principal, file_id, credentials, resource_type=ResourceType.FILE)
     moment = FileService.add_moment(principal, file_id, request.data, credentials)
     return JsonResponse(MomentSerializer.serialize_object(moment), status=200)
 
@@ -174,7 +174,7 @@ def remove_moment_view(request, file_id, moment_id):
 @permission_classes([IsAuthenticated])
 def add_subtitle_view(request, file_id):
     principal, credentials = _inputs(request)
-    authorizer.require_item(principal, ResourceAction.DOWNLOAD, file_id, credentials, resource_type=ResourceType.FILE)
+    permissions.authorize(ResourceAction.DOWNLOAD_SELECTED, principal, file_id, credentials, resource_type=ResourceType.FILE)
     subtitle = FileService.create_subtitle(principal, file_id, request.data, credentials)
     return JsonResponse(SubtitleSerializer.serialize_object(subtitle), status=200)
 

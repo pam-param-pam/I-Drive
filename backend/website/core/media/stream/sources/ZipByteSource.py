@@ -55,7 +55,7 @@ class ZipByteSource(ByteSource):
             fragments = await sync_to_async(self._fetch_fragments_sync)(entry["id"])
 
             for fragment in fragments:
-                url = await sync_to_async(attachment_service.get_attachment_url)(self.owner, fragment, entry["id"])
+                url = await sync_to_async(attachment_service.get_attachment_url)(self.owner, fragment, entry["id"], True)
                 auto_prefetch(fragment.id)
 
                 async with session.get(url) as response:
