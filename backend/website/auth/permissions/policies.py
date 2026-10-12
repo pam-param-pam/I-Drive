@@ -35,7 +35,6 @@ class ResourceAction(StrEnum):
     STREAM_ZIP = "stream_zip"
     STREAM_ZIP_ITEMS = "stream_zip_items"
     SEARCH = "search"
-    LIST_TRASH = "list_trash"
 
 
 class CredentialCheck(Protocol):
@@ -174,12 +173,6 @@ FILTER_ZIP_RULES = (
     Rule(checks.check_active, OnFailure.FILTER),
     Rule(checks.check_no_deletion, OnFailure.FILTER),
     Rule(checks.check_outside_trash, OnFailure.FILTER),
-)
-
-FILTER_TRASH_RULES = (
-    Rule(checks.check_active, OnFailure.FILTER),
-    Rule(checks.check_no_deletion, OnFailure.FILTER),
-    Rule(checks.check_explicit_trash, OnFailure.FILTER),
 )
 
 POLICIES = MappingProxyType({
@@ -395,14 +388,6 @@ POLICIES = MappingProxyType({
         credential_check=checks.lock_challenge,
         item_credential_on_failure=OnFailure.FILTER,
         allow_empty=True,
-        arguments=("principal",),
-    ),
-    ResourceAction.LIST_TRASH: Policy(
-        loader=load.trash_loader,
-        items=(*FILTER_TRASH_RULES, Rule(checks.top_level_trash, OnFailure.FILTER, True)),
-        capabilities=("read",),
-        allow_empty=True,
-        output_facts=frozenset({Fact.LOCK}),
         arguments=("principal",),
     ),
 })

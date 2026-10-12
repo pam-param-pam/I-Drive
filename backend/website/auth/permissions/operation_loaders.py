@@ -134,16 +134,6 @@ def share_resources_loader(context, root_facts, item_facts, resources) -> Access
     )
 
 
-def trash_loader(context, root_facts, item_facts, resources) -> AccessContext:
-    from website.queries.listing import load_trash_rows
-
-    request = context.request
-    files, folders = load_trash_rows(request.principal.user_id)
-    loaded = resources.for_rows(_refs(list(files), list(folders)), request.principal.user_id,
-                                files, folders, facts=item_facts)
-    return replace(context, items=as_items(loaded))
-
-
 def children_loader(context, root_facts, item_facts, resources) -> AccessContext:
     request = context.request
     loaded = resources.load_many((ResourceRef(ResourceType.FOLDER, extract_key(request.params, "folder_id")),),

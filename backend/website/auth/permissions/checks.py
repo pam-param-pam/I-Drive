@@ -207,11 +207,3 @@ def zip_member(row, state, _network_allowed, context):
     parents = context.request.get("parent_ids")
     if parents is not None and row["parent_id"] not in parents:
         raise ResourceNotFoundError()
-
-
-@needs(Fact.ROW, Fact.ANCESTORS, Fact.TRASH)
-def top_level_trash(row, state, _network_allowed, context):
-    loaded = context.items[0].loaded
-    ancestors = state.ancestor_ids[1:] if row["kind"] == "folder" else state.ancestor_ids
-    if any(loaded.ancestors[key]["trashed_at"] is not None for key in ancestors):
-        raise ResourceNotFoundError()

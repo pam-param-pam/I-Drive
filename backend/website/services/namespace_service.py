@@ -28,18 +28,6 @@ def list_folder_subtree(principal, folder_id, credentials=None):
     return tuple(item.resource for item in authorized.items if isinstance(item.resource, File))
 
 
-def list_trash(principal, credentials=None):
-    authorized = permissions.authorize(ResourceAction.LIST_TRASH, principal)
-    rows = []
-    for item in authorized.items:
-        row = dict(item.row)
-        row.update(is_locked=item.state.lock_id is not None, lock_from_id=item.state.lock_id,
-                   lock_from_name=item.state.lock_name)
-        rows.append(row)
-    return (tuple(row for row in rows if row["kind"] == "file"),
-            tuple(row for row in rows if row["kind"] == "folder"))
-
-
 @dataclass(frozen=True)
 class ItemRef:
     type: str

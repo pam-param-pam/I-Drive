@@ -24,8 +24,7 @@ from website.queries.selectors import check_if_bots_exists
 from website.services import attachment_service
 from website.services import search_service
 from website.auth.permissions.engine import permissions
-from website.queries.listing import load_entries
-from website.services import namespace_service
+from website.queries.listing import load_entries, load_trash_rows
 from website.services import user_service
 
 
@@ -187,8 +186,9 @@ def search(request):
 @throttle_classes([defaultAuthUserThrottle])
 @permission_classes([IsAuthenticated])
 def get_trash(request):
-    principal, credentials = _inputs(request)
-    files, folders = namespace_service.list_trash(principal, credentials)
+    principal = PrincipalFactory.from_authenticated_request(request)
+    user_service.authorize_user(principal, "read")
+    files, folders = load_trash_rows(principal.user_id)
 
     file_dicts = [FileSerializer.serialize_dict(file) for file in files]
     folder_dicts = [FolderSerializer.serialize_dict(folder) for folder in folders]
@@ -330,8 +330,7 @@ def get_fragment_url_view(request, fragment_id):
 @permission_classes([IsAuthenticated])
 def get_folder_file_stats(request, folder_id):
     principal, credentials = _inputs(request)
-    folder = permissions.authorize(ResourceAction.READ, principal, folder_id, credentials,
-                                   resource_type=ResourceType.FOLDER).items[0].resource
+    folder = permissions.authorize(ResourceAction.READ, principal, folder_id, credentials, resource_type=ResourceType.FOLDER).items[0].resource
     result = {file_type: {"count": bucket["count"], "total_size": bucket["size"]}
               for file_type, bucket in sorted(folder.visible_file_stats.items())}
     return JsonResponse(result)
@@ -344,7 +343,5 @@ def get_folder_hash(request, folder_id):
     principal, credentials = _inputs(request)
     folder_obj = permissions.authorize(ResourceAction.READ, principal, folder_id, credentials, resource_type=ResourceType.FOLDER).items[0].resource
     if folder_obj.subtree_hash is None or folder_obj.hash_input_generation != folder_obj.hash_computed_generation:
-        FolderHashWork.objects.get_or_create(folder_id=folder_obj.id)
         return JsonResponse({"status": "pending"}, status=202)
     return JsonResponse({"hash": folder_obj.subtree_hash})
-

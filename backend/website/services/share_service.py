@@ -241,9 +241,7 @@ def list_share_children(principal, folder_id, credentials=None):
     authorized = permissions.authorize(ResourceAction.READ_SHARE, principal, folder_id, credentials)
     resolution = ShareResolution.from_authorization(authorized)
     requested = authorized.items[-1]
-    children = load_entries(requested.row, requested.state,
-                            include_folders=authorized.data["allow_descendants"],
-                            exclude_locked_folders=True)
+    children = load_entries(requested.row, requested.state, include_folders=authorized.data["allow_descendants"], exclude_locked_folders=True)
     return resolution, children
 
 

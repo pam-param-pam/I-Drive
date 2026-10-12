@@ -24,9 +24,10 @@ from website.discord.Discord import discord
 from website.discord.constants import ERROR_UNKNOWN_MESSAGE, ERROR_UNKNOWN_MESSAGE_ATTACHMENT
 from website.models import DeletionJob, File, Folder, DISCORD_ATTACHMENT_MODELS
 from website.models.mixin_models import ItemState
+from website.models.other_models import NotificationKind, NotificationType
 from website.queries.resource_loader import ResourceLoader
 from website.queries.selectors import query_attachments
-from website.services import namespace_lock_service
+from website.services import namespace_lock_service, user_service
 from website.services.derived_state_service import (
     apply_counter_deltas, apply_file_stats_deltas, bump_folder_listings,
     dirty_hashes, merge_delta, merge_file_stats,
@@ -409,6 +410,15 @@ def _release_job(job_id, token, error=None, next_attempt_at=None):
             job.consecutive_failures = 0
             fields += ["next_attempt_at", "error", "consecutive_failures"]
         job.save(update_fields=fields)
+        if error is not None and job.state == DeletionJob.State.FAILED:
+            user_service.create_notification(
+                get_user_model().objects.get(pk=job.requested_by_id),
+                NotificationType.ERROR,
+                NotificationKind.GENERAL,
+                "notifications.delete_process_failed.title",
+                "notifications.delete_process_failed.message",
+                data={"errors": job.error},
+            )
 
 
 @app.task(queue="deletion", acks_late=True, reject_on_worker_lost=True)

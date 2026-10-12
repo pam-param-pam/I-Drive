@@ -23,7 +23,7 @@ from website.core.validators.GeneralChecks import (
     NotNegative)
 from website.models import (
     AudioTrack, File, Fragment, MediaPosition,
-    Moment, Subtitle, SubtitleTrack, Tag, VideoMetadata,
+    Moment, Subtitle, SubtitleTrack, Tag, Thumbnail, VideoMetadata,
     VideoMetadataTrackMixin, VideoTrack)
 from website.models.file_related_models import PhotoMetadata, RawMetadata
 from website.models.other_models import RawExtractionClaim
@@ -597,23 +597,31 @@ class FileService:
 
     @staticmethod
     def rename(principal: UserPrincipal, file_id: str, name: str, credentials: CredentialSet | None = None) -> FileCommandResult:
-        # what about file metadata which is no longer compatible with new file type?
         name = validate_value(name, str, checks=[IsValidItemName])
         owner_id = principal.user_id
         with transaction.atomic():
             locked, file_obj = _authorize_file(principal, file_id, ResourceAction.RENAME, credentials)
 
             extension = get_file_extension(name)
+            new_type = get_file_type(extension)
+            if new_type != file_obj.type and (
+                file_obj.tags.exists()
+                or any(model.objects.filter(file_id=file_obj.id).exists() for model in (
+                    Thumbnail, Moment, Subtitle, VideoMetadata, RawMetadata, PhotoMetadata,
+                    MediaPosition, RawExtractionClaim,
+                ))
+            ):
+                raise BadRequestError("Cannot change the type of a file with metadata")
             File.objects.filter(id=file_obj.id).update(
                 name=name,
                 extension=extension,
-                type=get_file_type(extension),
+                type=new_type,
                 last_modified_at=timezone.now(),
             )
             chain = locked.hierarchy.chain(str(file_obj.parent_id))
             stats = {}
             merge_file_stats(stats, chain, {file_obj.type: {"count": 1, "size": file_obj.size}}, -1)
-            merge_file_stats(stats, chain, {get_file_type(extension): {"count": 1, "size": file_obj.size}})
+            merge_file_stats(stats, chain, {new_type: {"count": 1, "size": file_obj.size}})
             apply_file_stats_deltas(stats)
             dirty_hashes(chain)
             bump_file_resources([file_obj.id])

@@ -1,31 +1,57 @@
+from itertools import batched
+
 from django.db.models import BooleanField, CharField, Value
 
+from website.auth.permissions.contexts import Fact, ResourceRef, ResourceType
 from website.config import MAX_FILES_IN_FOLDER, MAX_FOLDERS_IN_FOLDER
 from website.core.errors import BadRequestError
 from website.models import File, Folder
 from website.models.mixin_models import ItemState
-from website.queries.display import FILE_DISPLAY_FIELDS, FILE_QUERY_FIELDS
+from website.queries.display import FILE_DISPLAY_FIELDS, FILE_QUERY_FIELDS, FOLDER_DISPLAY_FIELDS
+from website.queries.resource_loader import ResourceLoader
+
+
+TRASH_BATCH_SIZE = 500
 
 
 def load_trash_rows(owner_id):
-    """Project explicit trash roots; never expand their descendants."""
-    files, folders = {}, {}
-    folder_fields = ("id", "owner_id", "parent_id", "name", "state", "resource_version", "trashed_at",
-                     "created_at", "last_modified_at", "visible_descendant_file_size",
-                     "visible_descendant_folder_count", "visible_descendant_file_count")
-    for model, kind, fields, target, limit in (
-        (File, "file", FILE_QUERY_FIELDS, files, MAX_FILES_IN_FOLDER),
-        (Folder, "folder", folder_fields, folders, MAX_FOLDERS_IN_FOLDER),
+    """Load explicit trash roots in batches, resolving shared ancestry once per batch."""
+    files, folders = [], []
+    loader = ResourceLoader()
+    facts = frozenset({Fact.TRASH, Fact.DELETION, Fact.LOCK})
+    for model, kind, fields, target, limit, resource_type in (
+        (File, "file", (*FILE_QUERY_FIELDS, "trashed_at"), files, MAX_FILES_IN_FOLDER, ResourceType.FILE),
+        (Folder, "folder", (*FOLDER_DISPLAY_FIELDS, "state"), folders, MAX_FOLDERS_IN_FOLDER, ResourceType.FOLDER),
     ):
-        queryset = model.objects.filter(owner_id=owner_id, state=ItemState.ACTIVE, trashed_at__isnull=False)
-        if kind == "file":
-            queryset = queryset.annotate(**File.get_display_annotate())
-        for row in queryset.order_by("id").values(*fields, "trashed_at")[:limit + 1]:
-            row.update(id=str(row["id"]), parent_id=str(row["parent_id"]) if row["parent_id"] else None,
-                       kind=kind, explicit_trash_root=True)
-            target[row["id"]] = row
-        if len(target) > limit:
-            raise BadRequestError(f"Trash may contain at most {limit} explicit {kind} roots")
+        candidates = model.objects.filter(
+            owner_id=owner_id, state=ItemState.ACTIVE, trashed_at__isnull=False,
+            parent__trashed_at__isnull=True,
+        ).order_by("id")
+        if model is File:
+            candidates = candidates.annotate(**File.get_display_annotate())
+        rows = candidates.values(*fields).iterator(chunk_size=TRASH_BATCH_SIZE)
+        for batch in batched(rows, TRASH_BATCH_SIZE):
+            by_id = {}
+            for row in batch:
+                row["id"] = str(row["id"])
+                row["parent_id"] = str(row["parent_id"]) if row["parent_id"] else None
+                row["kind"] = kind
+                by_id[row["id"]] = row
+            refs = tuple(ResourceRef(resource_type, row["id"]) for row in batch)
+            loaded = loader.for_rows(refs, owner_id, by_id if model is File else {},
+                                     by_id if model is Folder else {}, facts=facts)
+            for row in loaded.rows:
+                state = loaded.state(row)
+                hidden_by_trash = state.trash_root_id if model is File else state.parent_trash_root_id
+                if hidden_by_trash or state.deleting_root_id:
+                    continue
+                row.update(is_locked=state.lock_id is not None, lock_from_id=state.lock_id,
+                           lock_from_name=state.lock_name)
+                if model is File:
+                    row["in_trash_since"] = row["trashed_at"]
+                target.append(row)
+                if len(target) > limit:
+                    raise BadRequestError(f"Trash may contain at most {limit} explicit {kind} roots")
     return files, folders
 
 
@@ -34,7 +60,7 @@ def visible_children(queryset):
     return queryset.filter(state=ItemState.ACTIVE, trashed_at__isnull=True)
 
 
-def load_entries(parent, state, *, include_folders=True, exclude_locked_folders=False):
+def load_entries(parent, state, include_folders=True, exclude_locked_folders=False):
     files = visible_children(
         File.objects.filter(owner_id=parent["owner_id"], parent_id=parent["id"])).annotate(
         **File.get_display_annotate(),
