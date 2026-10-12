@@ -5,7 +5,8 @@ import uuid
 from django.db import transaction
 from django.utils import timezone
 
-from website.models import File
+from website.core.http.context import RequestContext
+from website.models import DeletionJob, DISCORD_ATTACHMENT_MODELS, File
 from website.models.mixin_models import ItemState
 from website.queries.resource_loader import ResourceLoader
 from website.services import namespace_lock_service
@@ -15,12 +16,9 @@ from website.services.derived_state_service import (
 )
 
 
-def admit_file_deletions(owner_id, locked, request_context=None, job=None):
-    """Mark file roots and update derived state under the caller's transaction and locks.
-
-    Files already covered by a deleting ancestor are skipped. Returns operation
-    IDs keyed by file ID.
-    """
+def admit_file_deletions(owner_id, locked, *, job, request_context=None):
+    if job is None:
+        raise ValueError("File deletion admission requires a DeletionJob")
     deltas = {}
     stats = {}
     roots = {}
@@ -61,6 +59,7 @@ def admit_file_deletions(owner_id, locked, request_context=None, job=None):
 
 def request_remote_missing_deletion(owner_id, file_ids):
     from website.services.file_service import lock_files_with_parents
+    from website.tasks.deletion.scheduling import schedule_deletion_job
 
     queued = 0
     # Bound admission even when a maintenance query finds many files.
@@ -72,5 +71,63 @@ def request_remote_missing_deletion(owner_id, file_ids):
             if not ids:
                 continue
             locked = lock_files_with_parents(owner_id, ids)
-            queued += len(admit_file_deletions(owner_id, locked))
+            context = RequestContext.from_user(owner_id).__json__()
+            job = DeletionJob.objects.create(
+                requested_by_id=owner_id, request_context=context,
+                requested_ids=[str(file_id) for file_id in ids],
+                state=DeletionJob.State.PENDING, heartbeat_at=timezone.now(),
+            )
+            roots = admit_file_deletions(owner_id, locked, request_context=context, job=job)
+            if not roots:
+                job.delete()
+                continue
+            job.total_file_items = len(roots)
+            job.save(update_fields=["total_file_items"])
+            queued += len(roots)
+            transaction.on_commit(lambda job_id=str(job.pk): schedule_deletion_job.delay(job_id), robust=True)
     return queued
+
+
+def visible_chain_to_deletion_root(chain, hierarchy, root_id):
+    if root_id not in chain:
+        raise RuntimeError("Deletion root is missing from the file's ancestry")
+    visible = chain[:chain.index(root_id) + 1]
+    for index, folder_id in enumerate(visible):
+        if hierarchy.folders[folder_id].trashed_at is not None:
+            return visible[:index + 1]
+    return visible
+
+
+def finalize_claimed_files(owner_id, file_ids, root, token):
+    """Remove claimed files and update their ancestors under the caller's transaction and owner lock."""
+    from website.services.file_service import lock_files_with_parents
+
+    locked = lock_files_with_parents(owner_id, file_ids)
+    if (len(locked.files) != len(file_ids) or
+            any(file_obj.deletion_claim_token != token or file_obj.deletion_remote_done_at is None
+                for file_obj in locked.files.values())):
+        raise RuntimeError("File batch has unresolved remote work")
+
+    deltas, stats, dirty, parents = {}, {}, set(), set()
+    for file_obj in locked.files.values():
+        chain = locked.hierarchy.chain(str(file_obj.parent_id))
+        merge_delta(deltas, chain, physical_descendant_file_count=-1,
+                    physical_descendant_file_size=-file_obj.size)
+        if not file_obj.deletion_is_root and file_obj.trashed_at is None:
+            visible = visible_chain_to_deletion_root(chain, locked.hierarchy, str(root.pk))
+            merge_delta(deltas, visible, visible_descendant_file_count=-1,
+                        visible_descendant_file_size=-file_obj.size)
+            merge_file_stats(stats, visible,
+                             {file_obj.type: {"count": 1, "size": file_obj.size}}, -1)
+        dirty.update(chain)
+        parents.add(str(file_obj.parent_id))
+    apply_counter_deltas(deltas)
+    apply_file_stats_deltas(stats)
+    for model in DISCORD_ATTACHMENT_MODELS:
+        model.objects.filter(file_id__in=file_ids).delete()
+    deletion = File.objects.filter(pk__in=file_ids, deletion_claim_token=token)
+    if deletion.count() != len(file_ids):
+        raise RuntimeError("File batch changed during finalization")
+    deletion.delete()
+    bump_folder_listings(parents)
+    dirty_hashes(dirty)

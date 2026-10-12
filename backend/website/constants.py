@@ -39,6 +39,9 @@ SHARE_ACCESS_DURATION = 180
 # Max files count allowed to stream in a single zip archive
 MAX_FILES_IN_ZIP = 10_000
 
+# Keep ZIP selections past the lifetime of their signed download URLs.
+ZIP_EXPIRY_SECONDS = 21600
+
 # How long files which are marked as remote missing will wait for admin fix, before being automatically deleted
 REMOTE_MISSING_FILES_WAIT_DAYS = 7
 

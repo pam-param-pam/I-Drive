@@ -56,8 +56,7 @@ class PermissionEngine:
         context = AccessContext(request)
         for check in policy.pre_checks:
             check(context)
-        context = policy.loader(context, policy.facts(root=True),
-                                policy.facts(root=False), self._resources)
+        context = policy.loader(context, policy.facts(root=True), policy.facts(root=False), self._resources)
         if policy.account_owner_id is not None:
             owner_id = policy.account_owner_id(context)
             if owner_id is not None:

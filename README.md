@@ -1,16 +1,13 @@
 
 ![Docker](https://img.shields.io/badge/docker-%230db7ed.svg?style=for-the-badge&logo=docker&logoColor=white)
 ![Discord](https://img.shields.io/badge/Discord-%235865F2.svg?style=for-the-badge&logo=discord&logoColor=white)
+<img src="https://img.shields.io/badge/build-passing-g" alt="Build Status"/>
 # I Drive
 
 **I Drive** is a cloud storage system & online file browser that stores files on Discord.
 It's basically like Google Drive, but it stores all files on Discord instead.<br>
 
-Want to know how **iDrive** works under the hood? [Read here](YAP.md).
-
-This checkout is undergoing a namespace/deletion refactor. Move, trash and restore
-run through durable Celery batches. Permanent deletion uses durable scopes, bounded workers and supervisor recovery. See
-[deletion status](delete.md) and [current gaps](TODO.md).
+Want to know how **iDrive** works under the hood? [Read here](https://github.com/pam-param-pam/I-Drive/blob/master/YAP.md)
 
 
 ![Architecture diagram](./public/images/MainScreen.jpg)
@@ -29,8 +26,7 @@ If you encounter any bugs or issues, please report them.**
 | Feature                                                              | Support |
 |----------------------------------------------------------------------|---------|
 | Online streaming and viewing of files without downloading            | ✅       |
-| Move/rename/trash/restore files & folders                             | ✅       |
-| Permanent deletion                                                   | ✅       |
+| Delete/move/rename files & folders                                   | ✅       |
 | Share files & folders                                                | ✅       |
 | Full File encryption                                                 | ✅       |
 | Advanced search                                                      | ✅       |
@@ -112,8 +108,7 @@ After completing these steps, you should have:
 
 The local environment runs PostgreSQL, Redis, Prometheus, and Grafana in Docker. 
 Django, Vite are run with hot reload.
-Celery workers and Beat are required for accepted move/trash/restore operations,
-folder hash/height repairs and scheduled work. They do not have hot reload.
+You may optionally start celery processes. They don't have hot reload.
 
 > [!NOTE]
 > The local configuration uses development credentials and settings. **Do not use it in production.**
@@ -142,7 +137,7 @@ Select **Local development** from the run-configuration list and click **Run**. 
 2. Waits until the infrastructure is ready.
 3. Starts Django and Vite with hot reload.
 
-After **Local development** is running, start the separate **Local Celery** configuration. It starts the general worker, cleanup queue worker, deletion queue worker and Celery Beat. The deletion queue processes scope expansion, remote attachment removal and bottom-up finalization.
+Celery is optional. After **Local development** is running, start the separate **Local Celery** configuration to run the general worker, websocket worker, deletion worker, and Celery Beat.
 
 Stopping a run configuration does not stop containers!
 
@@ -166,12 +161,27 @@ Grafana provisioning and dashboards are mounted from `grafana/`. Prometheus load
 
 # Performance
 
-Throughput depends on browser processing, backend bandwidth/CPU, encryption,
-attachment sizes and Discord rate limits. The earlier speed figures were historical
-measurements and are not a benchmark of this checkout.
+I Drive is fast enough for normal web-based file browsing, uploading, downloading, and streaming.
 
-# Developer documentation
+Typical speeds through the web interface:
 
-[YAP.md](YAP.md) links to the current architecture documents.
-[TODO.md](TODO.md) records implementation gaps.
-[backend/STYLE.md](backend/STYLE.md) describes backend conventions.
+| Operation                          | Speed    |
+|------------------------------------|----------|
+| Upload through web interface       | ~20 MB/s |
+| Download through web interface     | ~25 MB/s |
+| Zip download through web interface | ~25 MB/s |
+
+Download speed in the web interface is mainly constrained by backend bandwidth.
+When client-side decryption is not enabled, download speed will also be limited by server CPU, because files must be decrypted on the server before being sent to the client.
+Performance is also affected by the number of requests that need to be made to Discord. Smaller files require more individual requests, which can reduce overall throughput.
+A lot of requests to discord will also require more bots.
+
+
+Upload speed in the web interface is limited by thumbnail processing and internal browser bottlenecks.
+
+For maximum speed, use the [iDrive-Toolkit](https://github.com/pam-param-pam/iDrive-api-wrapper).
+
+With the API wrapper, downloads can reach the maximum speed available from your ISP. In testing, downloads reached around **200 MB/s**. Uploads reached around **50 MB/s**, with thumbnail extraction being the main bottleneck.
+
+# PS
+Dear Discord, please don't sue me 👉👈

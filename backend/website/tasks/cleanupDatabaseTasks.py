@@ -4,7 +4,7 @@ from django.contrib.auth.models import User
 from django.utils import timezone as django_timezone
 
 from website.celery import app
-from website.constants import MAX_TIME_FILES_IN_TRASH, MAX_RAW_EXTRACTION_ATTEMPTS
+from website.constants import MAX_TIME_FILES_IN_TRASH, MAX_RAW_EXTRACTION_ATTEMPTS, ZIP_EXPIRY_SECONDS
 from website.core.http.context import RequestContext
 from website.models import File, ShareableLink, PerDeviceToken, Folder
 from website.models.mixin_models import ItemState
@@ -36,11 +36,8 @@ def cleanup_expired_shares(user) -> int:
 
 
 def cleanup_expired_zips(user) -> int:
-    removed = 0
-    for zip_obj in UserZIP.objects.filter(owner_id=user.id):
-        if zip_obj.is_expired():
-            zip_obj.delete()
-            removed += 1
+    cutoff = django_timezone.now() - timedelta(seconds=ZIP_EXPIRY_SECONDS)
+    removed, _ = UserZIP.objects.filter(owner_id=user.id, created_at__lt=cutoff).delete()
     return removed
 
 def cleanup_tokens(user) -> int:

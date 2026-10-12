@@ -243,7 +243,7 @@ class ShareFolderSerializer(SimpleSerializer):
 class ShareSerializer(SimpleSerializer):
 
     @staticmethod
-    def serialize_object(share: ShareableLink, *, resource: File | Folder) -> dict:
+    def serialize_object(share: ShareableLink, resource: File | Folder) -> dict:
         obj = resource
 
         is_dir = isinstance(obj, Folder)

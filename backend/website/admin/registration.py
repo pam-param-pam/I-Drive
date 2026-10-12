@@ -2,9 +2,11 @@ import datetime
 
 import easy
 from django.contrib import admin
+from django.db.models import BooleanField, Case, Q, Value, When
 from django.urls import reverse
 
 from website.constants import API_BASE_URL, EncryptionMethod
+from website.config import MAX_FOLDER_DEPTH
 from website.core.crypto.signer import sign_resource
 from website.core.errors import DiscordError
 from website.models import Fragment, Folder, File, UserSettings, UserPerms, ShareableLink, Thumbnail, UserZIP, MediaPosition, Tag, Webhook, Bot, DiscordSettings, Moment, \
@@ -164,12 +166,29 @@ class FileAdmin(IDriveHistoryAdmin):
     list_display = ['name', 'parent', 'size', 'owner', 'state', 'type', 'created_at', 'is_trashed', 'is_locked']
     search_fields = ['name', 'id', 'type', 'owner__username']
 
-    @easy.smart(short_description="Locked", boolean=True)
+    def get_queryset(self, request):
+        locked_ancestor = Q()
+        for depth in range(MAX_FOLDER_DEPTH + 1):
+            locked_ancestor |= Q(**{f"{'parent__' * (depth + 1)}lock_scope__isnull": False})
+        return super().get_queryset(request).annotate(
+            admin_is_locked=Case(
+                When(locked_ancestor, then=Value(True)),
+                default=Value(False),
+                output_field=BooleanField(),
+            ),
+            admin_in_trash=Case(
+                When(trashed_at__isnull=False, then=Value(True)),
+                default=Value(False),
+                output_field=BooleanField(),
+            ),
+        )
+
+    @easy.smart(short_description="Locked", boolean=True, admin_order_field="admin_is_locked")
     def is_locked(self, obj: File):
         context = ResourceLoader().resolve_file(str(obj.id), obj.owner_id)
         return context.is_locked
 
-    @easy.smart(short_description="In trash", boolean=True)
+    @easy.smart(short_description="In trash", boolean=True, admin_order_field="admin_in_trash")
     def is_trashed(self, obj: File):
         return obj.trashed_at is not None
 

@@ -1,5 +1,3 @@
-"""Durable, bounded deletion of Discord media followed by database rows."""
-
 import logging
 import random
 import uuid
@@ -27,10 +25,9 @@ from website.models.mixin_models import ItemState
 from website.models.other_models import NotificationKind, NotificationType
 from website.queries.resource_loader import ResourceLoader
 from website.queries.selectors import query_attachments
-from website.services import namespace_lock_service, user_service
+from website.services import deletion_service, namespace_lock_service, user_service
 from website.services.derived_state_service import (
-    apply_counter_deltas, apply_file_stats_deltas, bump_folder_listings,
-    dirty_hashes, merge_delta, merge_file_stats,
+    apply_counter_deltas, bump_folder_listings, dirty_hashes, merge_delta,
 )
 from website.services.file_service import lock_files_with_parents
 from website.services.hierarchy_service import lock_folder_chains
@@ -270,48 +267,11 @@ def _delete_remote_message_group(job_id, owner_id, token, user, keys):
             _delete_message(user, channel_id, message_id)
 
 
-def _visible_chain(chain, hierarchy, root_id):
-    if root_id not in chain:
-        raise RuntimeError("Deletion root is missing from the file's ancestry")
-    visible = chain[:chain.index(root_id) + 1]
-    for index, folder_id in enumerate(visible):
-        if hierarchy.folders[folder_id].trashed_at is not None:
-            return visible[:index + 1]
-    return visible
-
-
 def _finalize_files(job_id, owner_id, file_ids, root, token):
     with transaction.atomic():
         namespace_lock_service.lock_owner_scope_exclusive(owner_id)
         job = DeletionJob.objects.select_for_update().get(pk=job_id, claim_token=token)
-        locked = lock_files_with_parents(owner_id, file_ids)
-        if any(file_obj.deletion_claim_token != token or file_obj.deletion_remote_done_at is None
-               for file_obj in locked.files.values()):
-            raise RuntimeError("File batch has unresolved remote work")
-
-        deltas, stats, dirty, parents = {}, {}, set(), set()
-        for file_obj in locked.files.values():
-            chain = locked.hierarchy.chain(str(file_obj.parent_id))
-            merge_delta(deltas, chain, physical_descendant_file_count=-1,
-                        physical_descendant_file_size=-file_obj.size)
-            if not file_obj.deletion_is_root and file_obj.trashed_at is None:
-                visible = _visible_chain(chain, locked.hierarchy, str(root.pk))
-                merge_delta(deltas, visible, visible_descendant_file_count=-1,
-                            visible_descendant_file_size=-file_obj.size)
-                merge_file_stats(stats, visible,
-                                 {file_obj.type: {"count": 1, "size": file_obj.size}}, -1)
-            dirty.update(chain)
-            parents.add(str(file_obj.parent_id))
-        apply_counter_deltas(deltas)
-        apply_file_stats_deltas(stats)
-        for model in DISCORD_ATTACHMENT_MODELS:
-            model.objects.filter(file_id__in=file_ids).delete()
-        deletion = File.objects.filter(pk__in=file_ids, deletion_claim_token=token)
-        if deletion.count() != len(file_ids):
-            raise RuntimeError("File batch changed during finalization")
-        deletion.delete()
-        bump_folder_listings(parents)
-        dirty_hashes(dirty)
+        deletion_service.finalize_claimed_files(owner_id, file_ids, root, token)
         DeletionJob.objects.filter(pk=job.pk).update(
             done_file_items=F("done_file_items") + len(file_ids), heartbeat_at=timezone.now(),
         )
@@ -344,7 +304,7 @@ def _finalize_folder(job_id, owner_id, token, folder, root):
         deltas = {}
         merge_delta(deltas, chain, physical_descendant_folder_count=-1)
         if current.pk != root.pk and current.trashed_at is None:
-            visible = _visible_chain(chain, hierarchy, str(root.pk))
+            visible = deletion_service.visible_chain_to_deletion_root(chain, hierarchy, str(root.pk))
             merge_delta(deltas, visible, visible_descendant_folder_count=-1)
         apply_counter_deltas(deltas)
         current.delete()

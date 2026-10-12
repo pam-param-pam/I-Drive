@@ -695,7 +695,7 @@ class FileService:
 
     @staticmethod
     def request_deletion(principal: UserPrincipal, file_ids: list[str], credentials: CredentialSet | None = None,
-                         job=None) -> list[FileCommandResult]:
+                         *, job) -> list[FileCommandResult]:
         owner_id = principal.user_id
         with transaction.atomic():
             namespace_lock_service.lock_owner_scope_exclusive(owner_id)

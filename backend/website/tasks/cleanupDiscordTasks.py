@@ -5,7 +5,6 @@ from django.utils import timezone as django_timezone
 
 from website.celery import app
 from website.constants import REMOTE_MISSING_FILES_WAIT_DAYS
-from website.core.http.context import RequestContext
 from website.core.errors import NoBotsError, DiscordError
 from website.discord.Discord import discord
 from website.models import Channel, File

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import errno
 import os
 import re
 import shutil
@@ -131,8 +132,9 @@ def acquire_instance_lock(address: tuple[str, int], launcher_name: str) -> socke
 
     try:
         return bind()
-    except OSError:
-        pass
+    except OSError as error:
+        if error.errno not in (errno.EADDRINUSE, 10048):
+            raise RuntimeError(f"Cannot bind the {launcher_name} launcher lock at {address}: {error}") from error
 
     while True:
         try:
