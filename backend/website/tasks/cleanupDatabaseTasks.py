@@ -4,14 +4,12 @@ from django.contrib.auth.models import User
 from django.utils import timezone as django_timezone
 
 from website.celery import app
-from website.constants import MAX_TIME_FILES_IN_TRASH, MAX_RAW_EXTRACTION_ATTEMPTS, ZIP_EXPIRY_SECONDS
-from website.core.http.context import RequestContext
-from website.models import File, ShareableLink, PerDeviceToken, Folder
-from website.models.mixin_models import ItemState
+from website.constants import MAX_TIME_FILES_IN_TRASH, ZIP_EXPIRY_SECONDS
+from website.models import ShareableLink, PerDeviceToken
 from website.models.other_models import Notification, UserZIP, RawExtractionClaim, NotificationType, NotificationKind
-from website.services import user_service
+from website.services import deletion_service, user_service
 from website.tasks.helper import format_cleanup_summary
-from website.tasks.raw_image.workflow import handle_parse_failure
+from website.tasks.raw_image.workflow import handle_parse_failure, MAX_RAW_EXTRACTION_ATTEMPTS
 
 
 def cleanup_old_notifications(user) -> int:
@@ -47,19 +45,8 @@ def cleanup_tokens(user) -> int:
 
 
 def cleanup_trash(user) -> int:
-    now = django_timezone.now()
-    cutoff = now - timedelta(days=MAX_TIME_FILES_IN_TRASH)
-
-    files = File.objects.filter(owner=user, state=ItemState.ACTIVE, trashed_at__lte=cutoff)
-    folders = Folder.objects.filter(owner=user, state=ItemState.ACTIVE, trashed_at__lte=cutoff)
-
-    items = list(files) + list(folders)
-
-    if items:
-        ctx = RequestContext.from_user(user.id)
-        #todo
-
-    return len(items)
+    cutoff = django_timezone.now() - timedelta(days=MAX_TIME_FILES_IN_TRASH)
+    return deletion_service.request_expired_trash_deletion(user.id, cutoff)
 
 def cleanup_raw_claims(user) -> int:
     claims = list(
@@ -104,7 +91,7 @@ def cleanup_user_db(user_id: int):
             result["tokens_error"] = str(e)
 
         try:
-            result["trash_removed"] = cleanup_trash(user)
+            result["trash_queued"] = cleanup_trash(user)
         except Exception as e:
             result["trash_error"] = str(e)
 

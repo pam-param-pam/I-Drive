@@ -33,7 +33,6 @@ class HttpxError(IDriveException):
 class CannotProcessDiscordRequestError(IDriveException):
     """Raised when we are unable to make requests to discord due to being overloaded"""
 
-
 class NoAvailableDiscordCredentialError(CannotProcessDiscordRequestError):
     """Raised when no Discord credential can serve the request right now."""
 

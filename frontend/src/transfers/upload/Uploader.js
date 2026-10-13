@@ -328,8 +328,8 @@ export class Uploader {
       //here we must only open the needed queues
 
       this.queues.backendFileQueue.open()
-      this.backendFileConsumer.retryFailedFiles().then(() => {
-         this.startBackendFileConsumer()
+      this.startBackendFileConsumer()
+      return this.backendFileConsumer.retryFailedFiles().finally(() => {
          this.queues.backendFileQueue.close()
       })
    }

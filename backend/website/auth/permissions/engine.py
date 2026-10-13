@@ -17,6 +17,7 @@ def load_account_facts(owner_id):
 
 
 def _run_rules(rules, item, context, network_allowed):
+    """Run policy rules, dropping a missing item only when its rule allows filtering."""
     for rule in rules:
         try:
             if rule.contextual:
@@ -37,6 +38,9 @@ class PermissionEngine:
         self._resources = ResourceLoader()
 
     def authorize(self, action, *args, **params) -> AuthorizationResult:
+        """Load policy-required facts, check roots before children, and return approved items.
+        Root failures reject the request; item rules may filter resources by policy.
+        """
         action = ResourceAction(action)
         policy = POLICIES[action]
         if len(args) > len(policy.arguments):
@@ -56,7 +60,7 @@ class PermissionEngine:
         context = AccessContext(request)
         for check in policy.pre_checks:
             check(context)
-        context = policy.loader(context, policy.facts(root=True), policy.facts(root=False), self._resources)
+        context = policy.loader(context, policy.facts(for_root=True), policy.facts(for_root=False), self._resources)
         if policy.account_owner_id is not None:
             owner_id = policy.account_owner_id(context)
             if owner_id is not None:
@@ -65,8 +69,8 @@ class PermissionEngine:
         for check in policy.post_checks:
             check(context)
         if policy.resource_loader is not None:
-            context = policy.resource_loader(context, policy.facts(root=True),
-                                             policy.facts(root=False), self._resources)
+            context = policy.resource_loader(context, policy.facts(for_root=True),
+                                             policy.facts(for_root=False), self._resources)
         if not context.root and not context.items and not policy.allow_empty:
             raise BadRequestError("This action requires resources")
 
@@ -78,7 +82,7 @@ class PermissionEngine:
         if policy.items_loader is not None:
             if root_challenges:
                 raise PermissionPasswordError(root_challenges)
-            context = policy.items_loader(context, policy.facts(root=True), policy.facts(root=False), self._resources)
+            context = policy.items_loader(context, policy.facts(for_root=True), policy.facts(for_root=False), self._resources)
             network_allowed = self._network_allowed(context, policy)
 
         credential_matches = {}
@@ -122,6 +126,7 @@ class PermissionEngine:
 
     @staticmethod
     def _credential_challenges(items, policy, credentials):
+        """Collect at most one password challenge per distinct effective lock scope."""
         if policy.credential_check is None:
             return ()
         challenges, checked = [], set()
@@ -137,7 +142,8 @@ class PermissionEngine:
 
     @staticmethod
     def _network_allowed(context, policy):
-        facts = policy.facts(root=True) | policy.facts(root=False)
+        """Check the network only when this policy needs it and a loaded item is locked."""
+        facts = policy.facts(for_root=True) | policy.facts(for_root=False)
         if Fact.NETWORK not in facts or not any(item.state.lock_id for item in (*context.root, *context.items)):
             return True
         return policy.network_allowed(context)

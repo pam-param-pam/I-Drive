@@ -31,6 +31,7 @@ def _get_share_metadata(token):
 
 
 def _load_item(context, root_facts, item_facts, resources) -> AccessContext:
+    """Resolve an untyped single ID within the principal's namespace when needed."""
     request = context.request
     item_id = extract_key(request.params, "item_id")
     validate_ids_as_list([item_id], max_length=1, child_type=str)
@@ -70,6 +71,7 @@ def user_resources_loader(context, root_facts, item_facts, resources) -> AccessC
 
 
 def move_loader(context, root_facts, item_facts, resources) -> AccessContext:
+    """Load sources and destination together, placing the destination in root checks."""
     request = context.request
     destination_id = extract_key(request.params, "destination_id")
     validate_ids_as_list([destination_id], max_length=1, child_type=str)
@@ -99,6 +101,10 @@ def share_loader(context, root_facts, item_facts, resources) -> AccessContext:
 
 
 def share_resources_loader(context, root_facts, item_facts, resources) -> AccessContext:
+    """Load the share root separately so its checks run before selected descendants.
+
+    Record its effective lock for descendant membership checks.
+    """
     request = context.request
     share = context.data["share"]
     root = ResourceRef(ResourceType(share.get_type()), share.root_id)
@@ -152,6 +158,7 @@ def signed_file_loader(context, root_facts, item_facts, resources) -> AccessCont
 
 
 def signed_zip_loader(context, root_facts, item_facts, resources) -> AccessContext:
+    """Snapshot the ZIP's admitted items and folder locks for later membership checks."""
     request = context.request
     record = UserZIP.objects.filter(id=request.principal.resource_id).first()
     if record is None:
@@ -168,6 +175,7 @@ def signed_zip_loader(context, root_facts, item_facts, resources) -> AccessConte
 
 
 def zip_items_loader(context, root_facts, item_facts, resources) -> AccessContext:
+    """Load requested ZIP resources against the previously admitted owner scope."""
     request = context.request
     scope = request.params["scope"]
     loaded = resources.load_many(_refs(request.get("file_ids"), request.get("folder_ids")),

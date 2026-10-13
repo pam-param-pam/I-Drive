@@ -15,6 +15,10 @@ def _require_postgresql() -> None:
 
 
 def lock_owner_scope_shared(owner_id: int) -> None:
+    """Hold a transaction-scoped owner lock that allows other ordinary mutations.
+
+    Deletion admission takes the exclusive variant, so it cannot race these mutations.
+    """
     _require_postgresql()
     _require_transaction()
     with connection.cursor() as cursor:
@@ -22,6 +26,7 @@ def lock_owner_scope_shared(owner_id: int) -> None:
 
 
 def lock_owner_scope_exclusive(owner_id: int) -> None:
+    """Serialize deletion admission against other namespace mutations for this owner."""
     _require_postgresql()
     _require_transaction()
     with connection.cursor() as cursor:

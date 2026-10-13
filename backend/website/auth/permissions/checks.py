@@ -36,6 +36,7 @@ def check_no_deletion(row, state, _network_allowed):
 
 @needs(Fact.ROW, Fact.TRASH)
 def is_trashed(row, state):
+    """Treat explicit trash roots and items beneath a trashed ancestor alike."""
     return bool(row.get("explicit_trash_root") or state.trash_root_id)
 
 
@@ -53,6 +54,7 @@ def check_explicit_trash(row, _state, _network_allowed):
 
 @needs(Fact.ROW, Fact.TRASH)
 def check_restore_parent_visible(row, state, _network_allowed):
+    """Prevent restoring an item while its parent remains inside trash."""
     trash_root = state.trash_root_id if row["kind"] == "file" else state.parent_trash_root_id
     if trash_root is not None:
         raise BadRequestError("Cannot restore an item under a trashed ancestor")
@@ -121,6 +123,7 @@ def same_parent_if_selected(context):
 
 @needs(Fact.ROW)
 def same_parent_if_share_selected(context):
+    """Require a common parent for both untyped and type-separated share selections."""
     selection = context.request.get("item_ids", context.request.get("item_id"))
     typed_selection = "file_ids" in context.request.params or "folder_ids" in context.request.params
     if isinstance(selection, (list, tuple)) or typed_selection:
@@ -154,6 +157,7 @@ def share_password(context):
 
 @needs(Fact.PRINCIPAL, Fact.TIME)
 def signed_expiry(context):
+    """Use ZIP admission time for scoped work, otherwise check expiry against now."""
     scope = context.request.get("scope")
     check_signed_expiry(context.request.principal, scope.admitted_at if scope is not None else timezone.now())
 
@@ -179,6 +183,7 @@ def matching_zip(context):
 
 @needs(Fact.ROW, Fact.ANCESTORS, Fact.LOCK, Fact.SHARE)
 def share_member(row, state, _network_allowed, context):
+    """Restrict access to the share root or permitted descendants in its lock scope."""
     share = context.data["share"]
     check_owner(row, share.owner_id)
     if row["kind"] == share.get_type() and row["id"] == share.root_id:
@@ -196,6 +201,7 @@ def share_member(row, state, _network_allowed, context):
 
 @needs(Fact.ROW, Fact.ANCESTORS, Fact.LOCK, Fact.ZIP_SCOPE)
 def zip_member(row, state, _network_allowed, context):
+    """Accept admitted ZIP items and descendants of admitted folders with matching locks."""
     scope = context.data["scope"]
     check_owner(row, scope.owner_id)
     if (row["kind"], row["id"]) in scope.items:

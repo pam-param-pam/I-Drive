@@ -1,3 +1,5 @@
+from copy import deepcopy
+
 from website.queries.display import load_file_display, load_folder_display, load_folder_displays
 import hashlib
 import json
@@ -22,6 +24,7 @@ from website.models.file_related_models import RawMetadata, PhotoMetadata, Tag, 
 from website.queries.builders import build_breadcrumbs, build_file_path, build_download_folder_listing
 from website.queries.selectors import check_if_bots_exists
 from website.services import attachment_service
+from website.services import cache_service
 from website.services import search_service
 from website.auth.permissions.engine import permissions
 from website.queries.listing import load_entries, load_trash_rows
@@ -39,11 +42,12 @@ def get_folder_info(request, folder_id):
     folder_obj = permissions.authorize(ResourceAction.READ, principal, folder_id, credentials, resource_type=ResourceType.FOLDER).items[0].resource
     breadcrumbs = build_breadcrumbs(folder_obj)
 
+    signature_epoch = int(time.time() // SIGNED_URL_EXPIRY_SECONDS)
     unsigned_payload = {
         "resource_version": folder_obj.resource_version,
         "listing_version": folder_obj.listing_version,
         "breadcrumbs": breadcrumbs,
-        "_signature_epoch": int(time.time() // SIGNED_URL_EXPIRY_SECONDS)
+        "_signature_epoch": signature_epoch
     }
     etag_value = hashlib.md5(json.dumps(unsigned_payload, sort_keys=True).encode()).hexdigest()
 
@@ -59,18 +63,27 @@ def get_folder_info(request, folder_id):
         return response
 
     authorized = permissions.authorize(ResourceAction.READ_CHILDREN, principal, folder_id, credentials)
-    children = load_entries(authorized.root[0].row, authorized.root[0].state)
-    folder_content = FolderSerializer.serialize_dict(load_folder_display(folder_obj.id, folder_obj.owner_id))
-    folder_rows = {str(row["id"]): row for row in load_folder_displays(
-        child for child in children if isinstance(child, Folder)
-    )}
-    folder_content["children"] = [
-        FolderSerializer.serialize_dict(folder_rows[str(child.id)]) if isinstance(child, Folder)
-        else FileSerializer.serialize_dict(child, sign_urls=False)
-        for child in children
-    ]
+    cached_payload = cache_service.get_folder_content(folder_obj)
+    if cached_payload is None:
+        children = load_entries(authorized.root[0].row, authorized.root[0].state)
+        folder_content = FolderSerializer.serialize_dict(load_folder_display(folder_obj.id, folder_obj.owner_id))
+        folder_rows = {str(row["id"]): row for row in load_folder_displays(
+            child for child in children if isinstance(child, Folder)
+        )}
+        folder_content["children"] = [
+            FolderSerializer.serialize_dict(folder_rows[str(child.id)]) if isinstance(child, Folder)
+            else FileSerializer.serialize_dict(child, sign_urls=False)
+            for child in children
+        ]
 
-    for file in folder_content["children"]:
+        cached_payload = {
+            "folder": folder_content,
+            "breadcrumbs": breadcrumbs
+        }
+        cache_service.set_folder_content(folder_obj, cached_payload)
+
+    response_payload = deepcopy(cached_payload)
+    for file in response_payload["folder"]["children"]:
         download_path = file.get("_download_path")
         thumbnail_path = file.get("_thumbnail_path")
 
@@ -82,11 +95,6 @@ def get_folder_info(request, folder_id):
 
         file.pop("_download_path", None)
         file.pop("_thumbnail_path", None)
-
-    response_payload = {
-        "folder": folder_content,
-        "breadcrumbs": breadcrumbs
-    }
 
     response = HttpResponse(
         json.dumps(response_payload),

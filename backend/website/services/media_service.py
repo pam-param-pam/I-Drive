@@ -3,8 +3,8 @@ import hashlib
 
 from django.contrib.auth import get_user_model
 
-from website.auth.permissions import (
-    ResourceAction, ResourceType, SignedResourcePrincipal)
+from website.auth.permissions import ResourceAction, SignedResourcePrincipal
+from website.auth.permissions.engine import permissions
 from website.config import MAX_THUMBNAIL_SIZE
 from website.constants import cache, MAX_MEDIA_CACHE_AGE
 from website.core.converters import param_to_bool
@@ -19,8 +19,6 @@ from website.core.media.utils import decrypt_bytes, fetch_discord_file, build_bi
 from website.models import File, Moment, Subtitle, Thumbnail
 from website.queries.selectors import check_if_bots_exists
 from website.services import attachment_service, cache_service, zip_service
-
-from website.auth.permissions.engine import permissions
 
 
 def _authorized_signed_file(principal: SignedResourcePrincipal, *, for_zip: bool = False) -> File:

@@ -7,7 +7,7 @@ from django.utils import timezone
 
 from website.celery import app
 from website.config import MAX_RAW_IMAGE_SIZE_ALLOWED_FOR_CONVERSION, GENERATE_RAW_THUMBNAILS
-from website.constants import MAX_RAW_EXTRACTION_ATTEMPTS, MAX_ATTACHMENTS_PER_MESSAGE, MAX_DISCORD_MESSAGE_SIZE
+from website.constants import MAX_ATTACHMENTS_PER_MESSAGE, MAX_DISCORD_MESSAGE_SIZE
 from website.core.errors import FailedToParseRawImage
 from website.discord.Discord import discord
 from website.models import File, DiscordSettings
@@ -18,6 +18,7 @@ from .processing import _download_and_decrypt_fragments, _process_raw_to_webp, _
 
 RAW_EXTRACTION_BATCH_SIZE = 25
 RAW_EXTRACTION_STALE_TIMEOUT = 30
+MAX_RAW_EXTRACTION_ATTEMPTS = 3
 
 FAILED_METADATA = {
     field: "FAILED TO PARSE"

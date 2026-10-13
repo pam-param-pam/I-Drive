@@ -1,7 +1,7 @@
 import datetime
 
 import easy
-from django.contrib import admin
+from django.contrib import admin, messages
 from django.db.models import BooleanField, Case, Q, Value, When
 from django.urls import reverse
 
@@ -21,7 +21,7 @@ from website.models.namespace_models import (
 from website.models.file_related_models import RawMetadata, PhotoMetadata
 from website.models.other_models import Notification, RawExtractionClaim
 from website.queries.resource_loader import ResourceLoader
-from website.services import attachment_service
+from website.services import attachment_service, deletion_service
 
 from .base import IDriveHistoryAdmin, IDriveModelAdmin
 
@@ -476,6 +476,31 @@ class DeletionJobAdmin(IDriveModelAdmin):
     list_display = ['id', 'requested_by', 'state', 'last_progress_percentage', 'done_file_items', 'total_file_items', 'done_folder_items', 'total_folder_items', 'heartbeat_at']
     list_filter = ['state']
     list_select_related = ['requested_by']
+    actions = ['retry_failed_jobs', 'delete_failed_jobs']
+
+    def has_retry_failed_permission(self, request):
+        return request.user.has_perm('website.change_deletionjob')
+
+    def has_delete_failed_permission(self, request):
+        return request.user.has_perm('website.delete_deletionjob')
+
+    @admin.action(description="Retry selected failed jobs", permissions=['retry_failed'])
+    def retry_failed_jobs(self, request, queryset):
+        job_ids = list(queryset.values_list('pk', flat=True))
+        retried = sum(deletion_service.retry_failed_job(job_id) for job_id in job_ids)
+        self.message_user(request, f"{retried} failed job(s) queued for retry.", messages.SUCCESS)
+        if retried != len(job_ids):
+            self.message_user(request, "Skipped jobs that are no longer failed or have no owner.", messages.WARNING)
+
+    @admin.action(description="Delete selected failed job records", permissions=['delete_failed'])
+    def delete_failed_jobs(self, request, queryset):
+        job_ids = list(queryset.values_list('pk', flat=True))
+        deleted = sum(deletion_service.delete_failed_job(job_id) for job_id in job_ids)
+        self.message_user(request, f"{deleted} failed job record(s) deleted.", messages.SUCCESS)
+        if deleted != len(job_ids):
+            self.message_user(request,
+                "Skipped jobs that are no longer failed or still have linked files or folders. "
+                "Retry jobs with unfinished deletion work.", messages.WARNING)
 
 
 @admin.register(PerDeviceToken)

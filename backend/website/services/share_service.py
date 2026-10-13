@@ -191,11 +191,6 @@ def list_shares(principal: UserPrincipal):
     return tuple(share for share in shares if share.expiration_time > now and share.root is not None)
 
 
-def get_item_inside_share(share: ShareableLink) -> File | Folder:
-    """Display data from a share returned by its service; cleanup runs separately."""
-    return share.root
-
-
 def _get_owned_share(principal: UserPrincipal, share_id: str, for_update: bool = False) -> ShareableLink:
     user_service.authorize_user(principal, "modify", "share")
     rows = ShareableLink.objects.filter(owner_id=principal.user_id)

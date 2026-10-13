@@ -64,6 +64,10 @@ class LockedFiles:
 
 
 def lock_files_with_parents(owner_id: int, file_ids: Iterable[str], extra_folder_ids: Iterable[str] = ()) -> LockedFiles:
+    """Lock parent chains before file rows and verify the files still belong there.
+
+    Call inside a transaction holding the owner's namespace barrier.
+    """
     owner_id = int(owner_id)
     ids = {str(file_id) for file_id in file_ids}
     snapshot = {
@@ -139,6 +143,7 @@ def _remove_related_attachment(
     model: Type[Moment] | Type[Subtitle],
     credentials: CredentialSet | None,
 ) -> FileCommandResult:
+    """Remove the database relation first, then delete its remote attachment outside the local transaction."""
     with transaction.atomic():
         _, file_obj = _authorize_file(principal, file_id, ResourceAction.EDIT_METADATA, credentials)
         attachment = model.objects.select_for_update().select_related("channel", "author").get(
@@ -156,6 +161,10 @@ def _remove_related_attachment(
 
 
 def _change_trash_state_locked(owner_id, locked, restore):
+    """Apply file trash changes and update visible ancestor counters together.
+
+    The caller supplies already locked files and parent chains.
+    """
     namespace_lock_service._require_transaction()
     direction = 1 if restore else -1
     deltas: dict[str, dict[str, int]] = {}
@@ -192,6 +201,7 @@ def _change_trash_state_locked(owner_id, locked, restore):
 
 
 def _attachment_identity(owner_id: int, data: dict) -> dict:
+    """Validate a Discord attachment and resolve its channel and author for this owner."""
     channel_id = validate_key(data, "channel_id", str, checks=[IsSnowflake])
     message_id = validate_key(data, "message_id", str, checks=[IsSnowflake])
     attachment_id = validate_key(data, "attachment_id", str, checks=[IsSnowflake])
@@ -386,6 +396,10 @@ class FileService:
                fragments: list[dict], key_b64: str | None = None, iv_b64: str | None = None, created_at=None, thumbnail: dict | None = None,
                video_metadata: dict | None = None, raw_metadata: dict | None = None, photo_metadata: dict | None = None,
                subtitles: list[dict] | None = None, credentials: CredentialSet | None = None) -> FileCreateResult:
+        """Create the file and its metadata in one transaction, updating ancestor totals.
+
+        An existing frontend ID owned by the caller returns its file without creating another.
+        """
         from website.services.thumbnail_service import thumbnail_service
 
         name = validate_value(name, str, checks=[IsValidItemName])
@@ -505,6 +519,7 @@ class FileService:
 
     @staticmethod
     def create_files(principal: UserPrincipal, files_data: list[dict], credentials: CredentialSet | None = None) -> list[File]:
+        """Create files individually; an already used frontend ID is omitted from the result."""
         user = User.objects.get(id=principal.user_id)
         check_if_bots_exists(user)
         validate_ids_as_list(files_data, max_length=100)
@@ -519,6 +534,10 @@ class FileService:
 
     @staticmethod
     def replace_content(principal: UserPrincipal, file_id: str, file_data: dict | None, credentials: CredentialSet | None = None) -> FileCommandResult:
+        """Replace editable content and metadata, then remove old remote attachments.
+
+        Remote cleanup runs after the local database transaction block.
+        """
         from website.services.thumbnail_service import thumbnail_service
 
         attachment = None
@@ -597,6 +616,7 @@ class FileService:
 
     @staticmethod
     def rename(principal: UserPrincipal, file_id: str, name: str, credentials: CredentialSet | None = None) -> FileCommandResult:
+        """Reject a type-changing rename when the file has type-specific metadata."""
         name = validate_value(name, str, checks=[IsValidItemName])
         owner_id = principal.user_id
         with transaction.atomic():
@@ -633,6 +653,7 @@ class FileService:
 
     @staticmethod
     def _move_locked(owner_id, locked, destination):
+        """Move locked files and transfer their counts and type statistics between chains."""
         namespace_lock_service._require_transaction()
         moving = [file_obj for file_obj in locked.files.values() if str(file_obj.parent_id) != str(destination.id)]
         if not moving:
@@ -696,6 +717,10 @@ class FileService:
     @staticmethod
     def request_deletion(principal: UserPrincipal, file_ids: list[str], credentials: CredentialSet | None = None,
                          *, job) -> list[FileCommandResult]:
+        """Authorize and admit deletion roots under the owner's exclusive barrier.
+
+        Remote work belongs to the supplied job and begins after admission commits.
+        """
         owner_id = principal.user_id
         with transaction.atomic():
             namespace_lock_service.lock_owner_scope_exclusive(owner_id)
@@ -851,6 +876,7 @@ class FileService:
 
     @staticmethod
     def _mark_remote_missing_attachment(owner_id: int, file_id: str, fragment_id: str) -> FileCommandResult:
+        """Mark a file missing after a fragment disappears remotely, removing visible totals."""
         with transaction.atomic():
             namespace_lock_service.lock_owner_scope_shared(owner_id)
             locked = lock_files_with_parents(owner_id, [file_id])

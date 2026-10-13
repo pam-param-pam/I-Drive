@@ -133,11 +133,6 @@ def validate_value(value: Any, expected_types: Union[Type, Tuple[Type, ...]], *,
     if not isinstance(expected_types, tuple):
         expected_types = (expected_types,)
 
-    # # String sanitisation for str type
-    # if str in expected_types and isinstance(value, str):
-    #     if "\x00" in value:
-    #         value = value.replace("\x00", "")
-
     # Type check against any of the allowed types
     if not any(isinstance(value, t) for t in expected_types):
         type_names = ", ".join(t.__name__ for t in expected_types)
@@ -224,16 +219,6 @@ def normalize_blocked_until(value):
     return value
 
 
-def get_public_ip():
-    key = cache_service.get_router_ip_key()
-    cached_ip = cache.get(key)
-    if not cached_ip:
-        from ..tasks.otherTasks import update_router_public_ip
-        update_router_public_ip.delay()
-
-    return cached_ip
-
-
 def hash_direct_folder_entries(file_entries: list[dict], child_entries: list[dict]) -> str:
     hasher = hashlib.sha256()
     for entry in sorted(file_entries, key=lambda item: (item["name"], item["crc"])):
@@ -249,39 +234,3 @@ def hash_direct_folder_entries(file_entries: list[dict], child_entries: list[dic
         hasher.update(entry["hash"].encode("utf-8"))
         hasher.update(b"\0")
     return hasher.hexdigest()
-
-
-def _get_folder_content_hash(root_folder_id: str, folder_entries: list[dict], file_entries: list[dict]) -> str:
-    folders_by_parent = {}
-    files_by_parent = {}
-
-    for entry in folder_entries:
-        folders_by_parent.setdefault(entry["parent_id"], []).append(entry)
-
-    for entry in file_entries:
-        files_by_parent.setdefault(entry["parent_id"], []).append(entry)
-
-    def hash_folder(folder_id: str) -> str:
-        hasher = hashlib.sha256()
-
-        for entry in sorted(files_by_parent.get(folder_id, []), key=lambda item: (item["name"], item["crc"])):
-            hasher.update(b"file\0")
-            hasher.update(entry["name"].encode("utf-8"))
-            hasher.update(b"\0")
-            hasher.update(str(entry["crc"]).encode("utf-8"))
-            hasher.update(b"\0")
-
-        child_hashes = []
-        for entry in folders_by_parent.get(folder_id, []):
-            child_hashes.append((entry["name"], hash_folder(entry["id"])))
-
-        for name, digest in sorted(child_hashes):
-            hasher.update(b"folder\0")
-            hasher.update(name.encode("utf-8"))
-            hasher.update(b"\0")
-            hasher.update(digest.encode("utf-8"))
-            hasher.update(b"\0")
-
-        return hasher.hexdigest()
-
-    return hash_folder(root_folder_id)

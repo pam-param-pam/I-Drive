@@ -1,14 +1,33 @@
-# Current implementation gaps
+| TODO List                                          | Status               |
+|----------------------------------------------------|----------------------|
+| Optimize shares                                    | Soon                 |
+| multiple files in 1 Discord attachment support     | ⛔  Coming prob never |
+| switch to a different framework for file streaming | ⛔  Coming prob never |
 
-These are observations from the current source, not a schedule or a list of completed migrations.
 
-- Add retention/cleanup policy for completed deletion jobs and scopes. The implemented pipeline retains those records for inspection; see [delete.md](delete.md).
-- Resolve the remaining deletion model overlap: `DeletionJob` groups scope progress and request context, but retains unused legacy fragment/failure fields; and both files and folders retain `ItemState` and `state_changed_at`. A separate file availability field has not been implemented.
-- Decide whether deletion-scope conflicts require database enforcement. Current composite parent/owner constraints enforce ownership consistency, but there are no scope-conflict triggers or stored procedures. See [locking.md](locking.md).
-- Review bounded subtree enumeration in `namespace_service.list_folder_subtree`: it collects descendant folder IDs before slicing to 1,000 folders and 1,000 files. This is neither pagination nor a complete subtree result.
-- Review authorization and invalidation around response-level caching, including `get_folder_file_stats`'s one-minute `cache_page` decorator. Its function body authorizes before constructing a response, but a cached HTTP response can bypass that body.
-- Decide issued signed-URL revocation semantics. ZIP records do not retain original share or lock versions; password/share changes alone cannot be documented as revoking those links.
-- Expand authorization and concurrency regression coverage beyond the deletion integration tests in `backend/test_deletion_workflow.py`. Those tests exercise PostgreSQL locks/aggregates with mocked Discord and broker calls.
-- Verify multi-process and multi-pod Prometheus behavior before scaling the backend.
+| BUGS |
+|------|
+| ...  |
 
-Successful namespace operations are deleted, so request-ID deduplication lasts only while the row exists. WebSocket delivery is best effort. Stronger idempotency retention or event delivery would require explicit additional storage.
+# TODO
+1) Move everything into a dedicated service layer
+2) Prohibit use of .delete() .save() etc on Models directly (how?)
+3) Introduce a new exception ValidationError() into services to make nicer errors
+5) add auto db backups and migrate to k8s
+
+
+0) Locked folders in 1 folder tree with diff locks?
+1) What to do with PDF files?
+2) Should i retire the decrypted endpoint? Or for small files only?
+5) Should i save the decrypted chunks to INDEXDB aswell?
+6) When to use selected for update????
+7) Extract items decorator should extract to files and folders not to 1 array items?
+8) Zip download, delete files inside = error prob
+9) cancel/confirm etc prompts should be called independently
+11) fix docker compose project name and prefix volumes properly
+12) fix db indexes!!!
+
+Verify the speed of celery delete tasks
+Re think how many of them should there be
+
+Prometheus metrics need to work for multiple backend pods

@@ -1,9 +1,5 @@
 from website.constants import cache
 
-FOLDER_CONTENT_CACHE_TIMEOUT = 6 * 60 * 60
-FOLDER_HASH_CACHE_TIMEOUT = 6 * 60 * 60
-
-
 def get_thumbnail_key(file_id: str) -> str:
     return f"thumbnail:{file_id}"
 
@@ -17,7 +13,7 @@ def get_router_ip_key():
     return "router_public_ip"
 
 def get_folder_content_version(folder) -> str:
-    return str(folder.listing_version)
+    return f"{folder.resource_version}:{folder.listing_version}"
 
 def get_folder_content(folder):
     cached = cache.get(get_folder_content_key(folder.id))
@@ -35,9 +31,8 @@ def set_folder_content(folder, folder_content: dict) -> None:
         get_folder_content_key(folder.id),
         {
             "version": get_folder_content_version(folder),
-            "content": folder_content,
-        },
-        timeout=FOLDER_CONTENT_CACHE_TIMEOUT,
+            "content": folder_content
+        }
     )
 
 
@@ -58,9 +53,8 @@ def set_folder_hash(folder_id: str, version: str, digest: str) -> None:
         get_folder_hash_key(folder_id),
         {
             "version": version,
-            "hash": digest,
-        },
-        timeout=FOLDER_HASH_CACHE_TIMEOUT,
+            "hash": digest
+        }
     )
 
 

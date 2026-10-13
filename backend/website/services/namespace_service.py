@@ -17,17 +17,6 @@ from website.services import namespace_lock_service
 from website.auth.permissions.engine import permissions
 
 
-def list_folder_subtree(principal, folder_id, credentials=None):
-    permissions.authorize(ResourceAction.READ, principal, folder_id, credentials,
-                            resource_type=ResourceType.FOLDER)
-    folder_ids = sorted(get_descendant_folder_ids([folder_id], include_roots=True))[:1000]
-    file_ids = list(File.objects.filter(owner_id=principal.user_id, parent_id__in=folder_ids)
-                    .values_list("id", flat=True)[:1000])
-    authorized = permissions.authorize(ResourceAction.READ_FILTER, principal, file_ids=file_ids,
-                                        folder_ids=folder_ids, credentials=credentials)
-    return tuple(item.resource for item in authorized.items if isinstance(item.resource, File))
-
-
 @dataclass(frozen=True)
 class ItemRef:
     type: str
@@ -38,6 +27,10 @@ class ItemRef:
 
 
 def classify_item_ids(principal: UserPrincipal, item_ids: list[str], max_length: int = 10000) -> tuple[ItemRef, ...]:
+    """Resolve untyped IDs within the owner's namespace while preserving input order.
+
+    Missing IDs and duplicate selections are rejected.
+    """
     validate_ids_as_list(item_ids, max_length=max_length, child_type=str)
     normalized = [str(item_id) for item_id in item_ids]
     file_ids = {
@@ -86,6 +79,10 @@ def restore(principal: UserPrincipal, item_ids: list[str], credentials: Credenti
 
 
 def _submit_operation(principal, item_ids, action, credentials, destination_id=None):
+    """Persist a namespace operation under the request ID and enqueue it after commit.
+
+    Reusing the ID with a different action or selection is rejected.
+    """
     from website.tasks.namespaceTasks import process_namespace_operation
 
     credentials = credentials or CredentialSet.empty()
@@ -109,6 +106,10 @@ def _submit_operation(principal, item_ids, action, credentials, destination_id=N
 
 
 def request_deletion(principal: UserPrincipal, item_ids: list[str], credentials: CredentialSet):
+    """Admit deletion roots and their job atomically under the exclusive owner lock.
+
+    Stored descendant counters set the job totals; processing starts after commit.
+    """
     from website.tasks.deletion.scheduling import schedule_deletion_job
 
     with transaction.atomic():

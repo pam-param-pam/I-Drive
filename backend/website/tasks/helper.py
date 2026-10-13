@@ -27,7 +27,7 @@ def format_cleanup_summary(res: dict) -> LiteralString | None:
         "shares_removed": "Shares",
         "zips_removed": "ZIPs",
         "tokens_removed": "Tokens",
-        "trash_removed": "Trash",
+        "trash_queued": "Trash",
         "notifications_removed": "Notifications",
         "discord_removed": "Discord",
         "cleanup_remote_missing_files": "Remote missing files",
@@ -36,7 +36,7 @@ def format_cleanup_summary(res: dict) -> LiteralString | None:
     for key, label in labels.items():
         count = res.get(key, 0)
         if count > 0:
-            parts.append(f"{label}: {count} removed")
+            parts.append(f"{label}: {count} {'queued' if key == 'trash_queued' else 'removed'}")
 
     # generic errors
     for k, v in res.items():

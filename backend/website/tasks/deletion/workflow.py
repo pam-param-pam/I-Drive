@@ -162,6 +162,11 @@ def _claim_files(job_id, owner_id, file_ids, root, token):
         namespace_lock_service.lock_owner_scope_exclusive(owner_id)
         DeletionJob.objects.select_for_update().get(pk=job_id, claim_token=token)
         now = timezone.now()
+        file_ids = list(File.objects.filter(owner_id=owner_id, pk__in=file_ids).filter(
+            Q(deletion_job_id__isnull=True) | Q(deletion_job_id=job_id),
+        ).values_list("pk", flat=True))
+        if not file_ids:
+            return []
         locked = lock_files_with_parents(owner_id, file_ids)
         if root is not None and str(root.pk) not in locked.hierarchy.folders:
             raise RuntimeError("Deletion root is no longer an ancestor")
@@ -181,6 +186,7 @@ def _claim_files(job_id, owner_id, file_ids, root, token):
         if root is not None:
             changes["deletion_operation_id"] = root.deletion_operation_id
         File.objects.filter(pk__in=file_ids).update(**changes)
+        return [str(file_id) for file_id in file_ids]
 
 
 def _scope_file_ids(job_id, owner_id, file_ids):
@@ -279,7 +285,9 @@ def _finalize_files(job_id, owner_id, file_ids, root, token):
 
 
 def _process_files(job_id, owner_id, token, file_ids, root):
-    _claim_files(job_id, owner_id, file_ids, root, token)
+    file_ids = _claim_files(job_id, owner_id, file_ids, root, token)
+    if not file_ids:
+        return
     unfinished = list(File.objects.filter(pk__in=file_ids, deletion_remote_done_at__isnull=True)
                       .values_list("pk", flat=True))
     if unfinished:
@@ -316,11 +324,33 @@ def _finalize_folder(job_id, owner_id, token, folder, root):
         _notify_progress(job, job.done_file_items, job.done_folder_items + 1)
 
 
-def _complete_job(job_id, token):
+def _complete_job(job_id, owner_id, token):
+    """Count absent roots and roots owned by another deletion job as handled."""
     with transaction.atomic():
+        namespace_lock_service.lock_owner_scope_exclusive(owner_id)
         job = DeletionJob.objects.select_for_update().get(pk=job_id, claim_token=token)
-        if job.done_file_items != job.total_file_items or job.done_folder_items != job.total_folder_items:
-            raise RuntimeError("Deletion job totals do not match completed work")
+        if job.done_file_items > job.total_file_items or job.done_folder_items > job.total_folder_items:
+            raise RuntimeError("Deletion job progress exceeds its total")
+        for model in (File, Folder):
+            if model.objects.filter(deletion_job_id=job_id).exists():
+                raise RuntimeError("Deletion job still owns unfinished items")
+        for ids in batched(job.requested_ids, 500):
+            for model in (File, Folder):
+                remaining = list(model.objects.filter(owner_id=owner_id, pk__in=ids))
+                starts = {str(item.pk if model is Folder else item.parent_id) for item in remaining}
+                hierarchy = lock_folder_chains(owner_id, starts)
+                for item in remaining:
+                    if (item.state == ItemState.DELETING and item.deletion_job_id is not None
+                            and item.deletion_job_id != job_id):
+                        continue
+                    chain = hierarchy.chain(str(item.pk if model is Folder else item.parent_id))
+                    if any(folder.state == ItemState.DELETING and folder.deletion_job_id is not None
+                           and folder.deletion_job_id != job_id
+                           for folder in (hierarchy.folders[key] for key in chain)):
+                        continue
+                    raise RuntimeError("Requested deletion item still exists without another deletion job")
+        job.done_file_items = job.total_file_items
+        job.done_folder_items = job.total_folder_items
         _notify_progress(job, job.done_file_items, job.done_folder_items, finished=True)
         owner_id = job.requested_by_id
         job.delete()
@@ -394,7 +424,7 @@ def process_deletion_job(job_id: str) -> None:
         elif kind == "folder":
             _finalize_folder(job_id, owner_id, token, value, root)
         elif kind == "complete":
-            _complete_job(job_id, token)
+            _complete_job(job_id, owner_id, token)
             return
         elif kind == "wait":
             _release_job(job_id, token, next_attempt_at=value)

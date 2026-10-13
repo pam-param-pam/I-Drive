@@ -152,6 +152,7 @@ class AuthorizationResult:
 
     @classmethod
     def from_context(cls, context: AccessContext) -> "AuthorizationResult":
+        """Export approved rows and only the ancestors needed by those approved items."""
         def approved(item):
             resource = item.resource if item.loaded.resources else None
             return AuthorizedItem(dict(item.row), item.state, resource)

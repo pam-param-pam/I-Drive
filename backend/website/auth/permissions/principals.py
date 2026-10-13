@@ -32,6 +32,7 @@ class SignedResourcePrincipal:
 class PrincipalFactory:
     @staticmethod
     def from_authenticated_request(request) -> UserPrincipal:
+        """Require an authenticated user and validated request context for owner actions."""
         user = getattr(request, "user", None)
         if not user or not user.is_authenticated:
             raise ResourcePermissionError("An authenticated user is required")
@@ -53,6 +54,7 @@ class PrincipalFactory:
 
     @staticmethod
     def from_signed_request(request, file_id: str, share_id: str | None = None) -> SignedResourcePrincipal:
+        """Verify the signed URL and retain its expiry and trusted client address."""
         expires = verify_signed_url(request)
         return SignedResourcePrincipal(
             resource_id=file_id,
@@ -64,6 +66,7 @@ class PrincipalFactory:
 
     @staticmethod
     def from_signed_zip_request(request, zip_id: str) -> SignedResourcePrincipal:
+        """Verify the signed ZIP URL before constructing its scoped principal."""
         expires = verify_signed_url(request)
         return SignedResourcePrincipal(
             resource_id=zip_id,

@@ -21,6 +21,10 @@ class LockedHierarchy:
 
 
 def lock_folder_chains(owner_id: int, folder_ids: Iterable[str]) -> LockedHierarchy:
+    """Lock each requested folder and its ancestors in a stable order.
+
+    Reject a hierarchy that changed between the initial snapshot and row locks.
+    """
     owner_id = int(owner_id)
     start_ids = {str(folder_id) for folder_id in folder_ids}
     if not start_ids:
@@ -42,11 +46,6 @@ def lock_folder_chains(owner_id: int, folder_ids: Iterable[str]) -> LockedHierar
     return LockedHierarchy(folders, snapshot_chains)
 
 
-def assert_not_root(folder: Folder) -> None:
-    if folder.parent_id is None:
-        raise BadRequestError("Cannot modify the root folder")
-
-
 def assert_move_has_no_cycle(source_id: str, destination_chain: tuple[str, ...]) -> None:
     if str(source_id) in destination_chain:
         raise BadRequestError("Cannot move a folder into itself or one of its descendants")
@@ -58,6 +57,10 @@ def assert_move_depth(destination_depth: int, source_height_bound: int) -> None:
 
 
 def assert_no_active_deletion_in_subtree(owner_id: int, folder_id: str) -> None:
+    """Reject operations whose subtree contains a deletion root, including a deleting file.
+
+    Walk upward from active roots so the entire subtree need not be loaded.
+    """
     roots = Folder.objects.filter(owner_id=owner_id, state=ItemState.DELETING,
                                   deletion_is_root=True).values_list("id", flat=True)
     file_parents = File.objects.filter(owner_id=owner_id, state=ItemState.DELETING,

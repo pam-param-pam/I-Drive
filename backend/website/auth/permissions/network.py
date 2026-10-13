@@ -9,6 +9,7 @@ from website.services import cache_service
 
 
 def ip_is_allowed(ip: str | None) -> bool:
+    """Allow local, configured, or cached router addresses; reject malformed inputs."""
     try:
         address = ipaddress.ip_address(ip)
     except (TypeError, ValueError):
@@ -27,6 +28,7 @@ def principal_network_allowed(context) -> bool:
 
 
 def signed_file_network_allowed(context) -> bool:
+    """Let share-backed signed files bypass the local-network restriction."""
     return context.request.principal.share_id is not None or principal_network_allowed(context)
 
 

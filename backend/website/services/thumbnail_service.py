@@ -31,6 +31,7 @@ class ThumbnailMutationResult:
 
 
 def _validated_thumbnail_values(file_obj: File, data: dict) -> dict:
+    """Validate thumbnail eligibility and bind its remote attachment to the file owner."""
     if file_obj.type not in ("Video", "Raw image", "Image", "Audio"):
         raise BadRequestError(f"Thumbnail is not allowed for file type: {file_obj.type}")
 
@@ -81,6 +82,7 @@ class ThumbnailService:
 
     @staticmethod
     def remove_during_content_replacement(file_obj: File) -> tuple[Thumbnail, ...]:
+        """Remove thumbnail rows inside the caller's transaction and return remote cleanup work."""
         existing = _existing_thumbnail_rows(file_obj)
         Thumbnail.objects.filter(file_id=file_obj.id).delete()
         set_thumbnail(file_obj)
@@ -93,6 +95,7 @@ class ThumbnailService:
 
     @staticmethod
     def _remove_missing_thumbnail_attachment(owner_id: int, file_id: str, thumbnail_id: str) -> ThumbnailMutationResult:
+        """Discard a thumbnail whose remote attachment is missing under file and parent locks."""
         with transaction.atomic():
             namespace_lock_service.lock_owner_scope_shared(owner_id)
             locked = lock_files_with_parents(owner_id, [file_id])
@@ -110,6 +113,7 @@ class ThumbnailService:
 
     @staticmethod
     def _finish(principal: UserPrincipal, result: ThumbnailMutationResult) -> None:
+        """Clean cache and remote attachments outside the local database transaction."""
         ThumbnailService._cleanup_cache(result.file_id)
         owner = User.objects.get(id=principal.user_id)
         if result.removed_attachments:
@@ -123,6 +127,10 @@ class ThumbnailService:
 
     @staticmethod
     def _change(principal: UserPrincipal, file_id: str, replacement: dict | None, must_exist: bool, credentials: CredentialSet | None) -> ThumbnailMutationResult:
+        """Replace or remove a thumbnail while updating resource and listing versions.
+
+        ``must_exist`` turns an absent thumbnail into a missing-resource error.
+        """
         owner_id = principal.user_id
         with transaction.atomic():
             namespace_lock_service.lock_owner_scope_shared(owner_id)

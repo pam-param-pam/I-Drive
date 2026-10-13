@@ -85,8 +85,9 @@ class Policy:
         if any(rule.on_failure != OnFailure.REJECT for rule in self.root):
             raise ValueError("Root rules must reject")
 
-    def facts(self, *, root: bool):
-        rules = self.root if root else self.items
+    def facts(self, *, for_root: bool) -> frozenset[Fact]:
+        """Collect facts needed by this policy's checks before resources are loaded."""
+        rules: tuple[Rule, ...] = self.root if for_root else self.items
         facts = {Fact.ROW, *self.output_facts}
         for rule in rules:
             facts.update(getattr(rule.check, "needs"))

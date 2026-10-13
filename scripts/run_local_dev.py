@@ -20,7 +20,7 @@ from local_common import (
 )
 
 
-INSTANCE_LOCK_ADDRESS = ("127.0.0.1", 55234)
+INSTANCE_LOCK_ADDRESS = ("127.0.0.1", 55236)
 def main() -> int:
     instance_lock = acquire_instance_lock(INSTANCE_LOCK_ADDRESS, "development")
     stop_requested = watch_instance_lock(instance_lock, "development")
