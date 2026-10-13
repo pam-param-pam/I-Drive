@@ -3,6 +3,7 @@ import random
 import uuid
 import httpx
 from collections import defaultdict
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import timedelta
 from itertools import batched
 
@@ -40,6 +41,7 @@ FILE_BATCH_SIZE = 50
 JOB_LEASE = timedelta(minutes=10)
 MAX_BACKOFF = timedelta(minutes=30)
 MAX_CONSECUTIVE_FAILURES = 8
+MAX_DISCORD_WORKERS = 8
 
 
 def _notify_progress(job, done_files, done_folders, finished=False):
@@ -224,17 +226,7 @@ def _delete_message(user, channel_id, message_id):
             raise
 
 
-def _delete_remote_batch(job_id, owner_id, token, file_ids):
-    user = get_user_model().objects.get(pk=owner_id)
-    queries = [model.objects.filter(file_id__in=file_ids).order_by().values_list(
-        "channel_id", "message_id",
-    ) for model in DISCORD_ATTACHMENT_MODELS]
-    keys = queries[0].union(*queries[1:]).order_by("channel_id", "message_id").iterator(chunk_size=100)
-    for group in batched(keys, 100):
-        _delete_remote_message_group(job_id, owner_id, token, user, group)
-
-
-def _delete_remote_message_group(job_id, owner_id, token, user, keys):
+def _plan_remote_message_group(job_id, owner_id, keys):
     grouped, in_scope = _remote_messages(job_id, owner_id, keys)
     bulk = defaultdict(list)
     individual = []
@@ -247,30 +239,80 @@ def _delete_remote_message_group(job_id, owner_id, token, user, keys):
         else:
             individual.append((channel_id, message_id, None, []))
 
+    bot_operations = []
+    webhook_operations = []
     for channel_id, messages in bulk.items():
         for group in batched(messages, 100):
-            _heartbeat(job_id, token)
             if len(group) > 1:
-                try:
-                    discord.bulk_delete_messages(user, channel_id, list(group))
-                except DiscordError as error:
-                    if error.status != 404:
-                        raise
-                    for message_id in group:
-                        _delete_message(user, channel_id, message_id)
+                bot_operations.append(("bulk_delete", channel_id, tuple(group)))
             else:
-                _delete_message(user, channel_id, group[0])
+                bot_operations.append(("delete", channel_id, group[0]))
 
     for channel_id, message_id, author, keep in individual:
-        _heartbeat(job_id, token)
         if keep:
-            try:
-                discord.edit_attachments_webhook(user, author, message_id, keep)
-            except DiscordError as error:
-                if error.code not in (ERROR_UNKNOWN_MESSAGE, ERROR_UNKNOWN_MESSAGE_ATTACHMENT):
-                    raise
+            webhook_operations.append((author, message_id, tuple(keep)))
         else:
+            bot_operations.append(("delete", channel_id, message_id))
+
+    return bot_operations, webhook_operations
+
+
+def _execute_bot_operation(user, operation):
+    operation_type, channel_id, payload = operation
+    if operation_type == "delete":
+        _delete_message(user, channel_id, payload)
+        return
+
+    try:
+        discord.bulk_delete_messages(user, channel_id, list(payload))
+    except DiscordError as error:
+        if error.status != 404:
+            raise
+        for message_id in payload:
             _delete_message(user, channel_id, message_id)
+
+
+def _execute_webhook_operation(user, operation):
+    author, message_id, keep = operation
+    try:
+        discord.edit_attachments_webhook(user, author, message_id, list(keep))
+    except DiscordError as error:
+        if error.code not in (ERROR_UNKNOWN_MESSAGE, ERROR_UNKNOWN_MESSAGE_ATTACHMENT):
+            raise
+
+
+def _execute_remote_operations(job_id, token, user, state, credential_type, operations, worker):
+    if not operations:
+        return
+    available = min(state.get_available_credential_count(credential_type), 1)
+
+    max_workers = 1 if credential_type == "webhook" else min(MAX_DISCORD_WORKERS, available, len(operations))
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        futures = [executor.submit(worker, user, operation) for operation in operations]
+        for future in as_completed(futures):
+            future.result()
+            _heartbeat(job_id, token)
+
+
+def _delete_remote_batch(job_id, owner_id, token, file_ids):
+    user = get_user_model().objects.get(pk=owner_id)
+    queries = [model.objects.filter(file_id__in=file_ids).order_by().values_list(
+        "channel_id", "message_id",
+    ) for model in DISCORD_ATTACHMENT_MODELS]
+    keys = queries[0].union(*queries[1:]).order_by("channel_id", "message_id").iterator(chunk_size=100)
+    bot_operations = []
+    webhook_operations = []
+    for group in batched(keys, 100):
+        planned_bot, planned_webhook = _plan_remote_message_group(job_id, owner_id, group)
+        bot_operations.extend(planned_bot)
+        webhook_operations.extend(planned_webhook)
+
+    if not bot_operations and not webhook_operations:
+        return
+
+    state = discord.get_user_state(user)
+    _execute_remote_operations(job_id, token, user, state, "bot", bot_operations, _execute_bot_operation)
+    _execute_remote_operations(job_id, token, user, state, "webhook", webhook_operations, _execute_webhook_operation)
 
 
 def _finalize_files(job_id, owner_id, file_ids, root, token):

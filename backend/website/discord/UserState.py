@@ -5,7 +5,7 @@ from typing import Optional, Dict, Any
 
 from django_redis import get_redis_connection
 
-from website.core.errors import BadRequestError, DiscordBlockError, CannotProcessDiscordRequestError, NoAvailableDiscordCredentialError
+from website.core.errors import BadRequestError, DiscordBlockError, NoAvailableDiscordCredentialError
 from website.core.helpers import normalize_blocked_until
 from website.discord.CredentialState import CredentialState, CredentialType
 from website.discord.utils import decode_redis_hash
@@ -205,6 +205,68 @@ class UserState:
             """)
 
     @property
+    def _available_credential_count_script(self):
+        return self._redis.register_script("""
+            local now = tonumber(ARGV[1])
+            local max_concurrent = tonumber(ARGV[2])
+            local requested_type = ARGV[3]
+
+            local global_blocked_until_raw = redis.call('HGET', KEYS[1], 'blocked_until')
+            if global_blocked_until_raw and global_blocked_until_raw ~= '' then
+                local global_blocked_until
+                if global_blocked_until_raw == 'inf' then
+                    global_blocked_until = math.huge
+                else
+                    global_blocked_until = tonumber(global_blocked_until_raw)
+                end
+
+                if global_blocked_until and now < global_blocked_until then
+                    return 0
+                end
+                redis.call('HDEL', KEYS[1], 'blocked_until')
+            end
+
+            local available = 0
+            local credentials = redis.call('SMEMBERS', KEYS[2])
+            for _, credential_key in ipairs(credentials) do
+                if redis.call('HGET', credential_key, 'credential_type') == requested_type then
+                    local blocked = false
+                    local blocked_until_raw = redis.call('HGET', credential_key, 'blocked_until')
+                    if blocked_until_raw and blocked_until_raw ~= '' then
+                        local blocked_until
+                        if blocked_until_raw == 'inf' then
+                            blocked_until = math.huge
+                        else
+                            blocked_until = tonumber(blocked_until_raw)
+                        end
+                        blocked = blocked_until and now < blocked_until
+                    end
+
+                    if not blocked then
+                        local reset_ts_raw = redis.call('HGET', credential_key, 'reset_timestamp')
+                        if reset_ts_raw and reset_ts_raw ~= '' then
+                            local reset_ts = tonumber(reset_ts_raw)
+                            if reset_ts and now >= reset_ts then
+                                local rate_limit = tonumber(redis.call('HGET', credential_key, 'rate_limit') or '5')
+                                redis.call('HSET', credential_key, 'requests_remaining', rate_limit)
+                                redis.call('HSET', credential_key, 'reset_timestamp', '')
+                            end
+                        end
+
+                        local requests_remaining = tonumber(redis.call('HGET', credential_key, 'requests_remaining') or '0')
+                        local in_flight = tonumber(redis.call('HGET', credential_key, 'in_flight') or '0')
+                        local effective_max_concurrent = math.min(max_concurrent, requests_remaining + in_flight)
+                        if requests_remaining > 0 and in_flight < effective_max_concurrent then
+                            available = available + 1
+                        end
+                    end
+                end
+            end
+
+            return available
+            """)
+
+    @property
     def _block_credential_script(self):
         return self._redis.register_script("""
             local retry_after = ARGV[1]
@@ -327,6 +389,8 @@ class UserState:
             "guild_id": meta.get("guild_id"),
             "channels": channels,
             "max_concurrent_per_token": int(meta.get("max_concurrent_per_token", self.max_concurrent_per_token)),
+            "available_bot_count": self.get_available_credential_count("bot"),
+            "available_webhook_count": self.get_available_credential_count("webhook"),
             "_blocked_until": normalize_blocked_until(blocked_until),
             "bots": bots,
             "webhooks": webhooks,
@@ -442,6 +506,15 @@ class UserState:
     def acquire_webhook(self, webhook: Optional["Webhook"] = None) -> CredentialState:
         secret = webhook.url if webhook else None
         return self._acquire("webhook", secret)
+
+    def get_available_credential_count(self, credential_type: CredentialType) -> int:
+        if credential_type not in ("bot", "webhook"):
+            raise ValueError("credential_type must be 'bot' or 'webhook'")
+        self._ensure_initialized()
+        return int(self._available_credential_count_script(
+            keys=[self._meta_key(), self._credentials_set_key()],
+            args=[time.time(), self.max_concurrent_per_token, credential_type],
+        ))
 
     # ------------------------------------------------------------------
     # Release
