@@ -234,7 +234,7 @@ def _create_fragment(file_obj: File, data: dict) -> Fragment:
     return result
 
 
-def _create_subtitle(file_obj: File, data: dict) -> Subtitle:
+def _create_subtitle(file_obj: File, data: dict, *, upload_generated: bool) -> Subtitle:
     if file_obj.type != "Video":
         raise BadRequestError(f"Subtitles are not allowed for file type: {file_obj.type}")
 
@@ -252,7 +252,7 @@ def _create_subtitle(file_obj: File, data: dict) -> Subtitle:
         "key": key,
         "iv": iv,
     })
-    result = Subtitle.objects.create(**values)
+    result = Subtitle.objects.create(**values, upload_generated=upload_generated)
     adjust_relation_count(file_obj, "subs_count", 1)
     return result
 
@@ -461,7 +461,7 @@ class FileService:
             if photo_metadata is not None:
                 _create_photo_metadata(file_obj, photo_metadata)
             for subtitle in subtitles or ():
-                _create_subtitle(file_obj, subtitle)
+                _create_subtitle(file_obj, subtitle, upload_generated=True)
 
             chain = locked.hierarchy.chain(str(parent.id))
             deltas: dict[str, dict[str, int]] = {}
@@ -841,7 +841,7 @@ class FileService:
     ) -> Subtitle:
         with transaction.atomic():
             _, file_obj = _authorize_file(principal, file_id, ResourceAction.EDIT_METADATA, credentials)
-            subtitle = _create_subtitle(file_obj, data)
+            subtitle = _create_subtitle(file_obj, data, upload_generated=False)
             bump_file_resources([file_obj.id])
             bump_folder_listings([file_obj.parent_id])
             return subtitle

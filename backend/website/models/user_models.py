@@ -16,7 +16,7 @@ class UserSettings(models.Model):
     encryption_method = models.SmallIntegerField(default=2)
     keep_creation_timestamp = models.BooleanField(default=False)
     popup_preview = models.BooleanField(default=False)
-    item_info_shortcut = models.BooleanField(default=False)
+    item_info_shortcut = models.BooleanField(default=True)
     clientside_decryption_method = models.SmallIntegerField(default=1)
     theme = models.CharField(default="dark", max_length=20)
 

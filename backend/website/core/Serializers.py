@@ -209,9 +209,6 @@ class FolderSerializer:
     def serialize_dict(row: dict) -> dict:
         result = {
             "isDir": True, "id": row["id"], "name": row["name"], "parent_id": row["parent_id"],
-            "size": row["visible_descendant_file_size"],
-            "folder_count": row["visible_descendant_folder_count"],
-            "file_count": row["visible_descendant_file_count"],
             "created": row["created_at"].isoformat(), "last_modified": row["last_modified_at"].isoformat(),
             "isLocked": row["is_locked"],
         }

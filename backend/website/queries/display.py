@@ -11,8 +11,7 @@ from website.queries.resource_loader import ResourceLoader
 
 FOLDER_DISPLAY_FIELDS = (
     "id", "owner_id", "parent_id", "name", "created_at", "last_modified_at",
-    "trashed_at", "visible_descendant_file_size", "visible_descendant_folder_count",
-    "visible_descendant_file_count",
+    "trashed_at",
 )
 FILE_DISPLAY_FIELDS = (
     "id", "name", "in_trash", "state", "parent_id", "owner_id", "is_locked",

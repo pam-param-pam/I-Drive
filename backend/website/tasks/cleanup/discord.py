@@ -1,3 +1,5 @@
+"""Per-user Discord cleanup tasks."""
+
 from datetime import timedelta, datetime, timezone
 
 from django.contrib.auth.models import User
@@ -134,12 +136,15 @@ def cleanup_user_discord(user_id: int):
         try:
             result["cleanup_remote_missing_files"] = cleanup_remote_missing_files(user_id)
         except Exception as e:
-            result["cleanup_remote_missing_files"] = str(e)
+            result["cleanup_remote_missing_files_error"] = str(e)
 
         try:
-            result["discord_removed"] = cleanup_dangling_discord_files(user_id)
+            discord_result = cleanup_dangling_discord_files(user_id)
+            result["discord_removed"] = discord_result["deleted"]
+            if discord_result["errors"]:
+                result["discord_error"] = "; ".join(discord_result["errors"])
         except Exception as e:
-            result["discord_removed"] = str(e)
+            result["discord_error"] = str(e)
 
         summary = format_cleanup_summary(result)
         if summary:

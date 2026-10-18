@@ -35,7 +35,7 @@ def format_cleanup_summary(res: dict) -> LiteralString | None:
 
     for key, label in labels.items():
         count = res.get(key, 0)
-        if count > 0:
+        if isinstance(count, int) and count > 0:
             parts.append(f"{label}: {count} {'queued' if key == 'trash_queued' else 'removed'}")
 
     # generic errors

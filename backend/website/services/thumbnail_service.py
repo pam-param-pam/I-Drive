@@ -76,7 +76,7 @@ class ThumbnailService:
     @staticmethod
     def add_to_new_file(file_obj: File, data: dict) -> Thumbnail:
         values = _validated_thumbnail_values(file_obj, data)
-        thumbnail = Thumbnail.objects.create(**values)
+        thumbnail = Thumbnail.objects.create(**values, upload_generated=True)
         set_thumbnail(file_obj, thumbnail)
         return thumbnail
 
@@ -150,7 +150,7 @@ class ThumbnailService:
                 return ThumbnailMutationResult(str(file_obj.id), file_obj.resource_version)
 
             Thumbnail.objects.filter(file_id=file_obj.id).delete()
-            thumbnail = Thumbnail.objects.create(**values) if values is not None else None
+            thumbnail = Thumbnail.objects.create(**values, upload_generated=False) if values is not None else None
             set_thumbnail(file_obj, thumbnail)
             File.objects.filter(id=file_obj.id).update(last_modified_at=timezone.now())
             bump_file_resources([file_obj.id])

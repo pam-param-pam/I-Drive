@@ -11,7 +11,7 @@ from .principals import SharePrincipal, SignedResourcePrincipal, UserPrincipal
 class ResourceAction(StrEnum):
     READ = "read"
     READ_CHILDREN = "read_children"
-    READ_FILE_METADATA = "read_file_metadata"
+    READ_ITEM_METADATA = "read_item_metadata"
     READ_FILTER = "read_filter"
     READ_TRASH = "read_trash"
     CREATE_CHILD = "create_child"
@@ -184,11 +184,11 @@ POLICIES = MappingProxyType({
         credential_check=checks.lock_challenge,
         selection_checks=(checks.same_parent_if_selected,),
     ),
-    ResourceAction.READ_FILE_METADATA: Policy(
+    ResourceAction.READ_ITEM_METADATA: Policy(
         loader=load.user_resources_loader,
         items=FILE_METADATA_RULES,
         capabilities=("read",),
-        resource_types={"file"},
+        resource_types={"file", "folder"},
         credential_check=checks.lock_challenge,
         selection_checks=(checks.same_parent_if_selected,),
     ),

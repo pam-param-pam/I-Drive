@@ -69,18 +69,22 @@
          </div>
 
          <div v-if="isFolderExpanded" class="expandable-content">
-            <p>
-               <strong>{{ $t("prompts.numberDirs") }}:</strong> {{ numberDirs }}
-            </p>
-            <p>
-               <strong>{{ $t("prompts.numberFiles") }}:</strong> {{ numberFiles }}
-            </p>
-            <p v-if="folderSize != null">
-               <strong>{{ $t("prompts.size") }}: </strong>
-               <code @dblclick="changeView($event, folderSize, humanSize, ' bytes')">
-                  {{ humanSize(folderSize) }}
-               </code>
-            </p>
+            <p v-if="isLoadingAdditionalInfo">{{ $t("prompts.loading") }}</p>
+            <p v-else-if="additionalInfoError">{{ $t("prompts.error") }}</p>
+            <template v-else>
+               <p>
+                  <strong>{{ $t("prompts.numberDirs") }}:</strong> {{ numberDirs }}
+               </p>
+               <p>
+                  <strong>{{ $t("prompts.numberFiles") }}:</strong> {{ numberFiles }}
+               </p>
+               <p v-if="folderSize != null">
+                  <strong>{{ $t("prompts.size") }}: </strong>
+                  <code @dblclick="changeView($event, folderSize, humanSize, ' bytes')">
+                     {{ humanSize(folderSize) }}
+                  </code>
+               </p>
+            </template>
          </div>
       </div>
 
@@ -238,6 +242,8 @@ export default {
          currentTrack: null,
          isFolderExpanded: false,
          isFileExpanded: false,
+         isLoadingAdditionalInfo: false,
+         additionalInfoError: false,
          metadata: null
       }
    },
@@ -248,13 +254,13 @@ export default {
          return this.selectedCount === 0 ? this.currentFolder : this.selectedCount === 1 ? this.selected[0] : null
       },
       numberDirs() {
-         return this.folderInfo?.folder_count
+         return this.metadata?.folder_count
       },
       numberFiles() {
-         return this.folderInfo?.file_count
+         return this.metadata?.file_count
       },
       folderSize() {
-         return this.folderInfo?.size
+         return this.metadata?.size
       },
       isInShareContext() {
          return !this.isLogged
@@ -468,7 +474,20 @@ export default {
       async fetchMoreInfo() {
          const item = this.folderInfo
          if (item.isDir) {
-            this.isFolderExpanded = !this.isFolderExpanded
+            if (this.isFolderExpanded) {
+               this.isFolderExpanded = false
+               return
+            }
+            this.isFolderExpanded = true
+            this.isLoadingAdditionalInfo = true
+            this.additionalInfoError = false
+            try {
+               this.metadata = await fetchAdditionalInfo(item.id)
+            } catch {
+               this.additionalInfoError = true
+            } finally {
+               this.isLoadingAdditionalInfo = false
+            }
             return
          }
          if (this.metadata !== null) {

@@ -42,8 +42,8 @@ export async function rename(itemId, data) {
 }
 
 
-export async function fetchAdditionalInfo(fileId) {
-   let url = `/files/${fileId}/more-info`
+export async function fetchAdditionalInfo(itemId) {
+   let url = `/items/${itemId}/more-info`
    let response = await backendInstance.get(url)
    return response.data
 }

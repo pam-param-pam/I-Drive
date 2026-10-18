@@ -135,9 +135,29 @@ def get_usage(request, folder_id):
 @api_view(['GET'])
 @throttle_classes([defaultAuthUserThrottle])
 @permission_classes([IsAuthenticated])
-def fetch_additional_info(request, file_id):
+def fetch_additional_info(request, item_id):
     principal, credentials = _inputs(request)
-    item_obj = permissions.authorize(ResourceAction.READ_FILE_METADATA, principal, file_id, credentials, resource_type=ResourceType.FILE).items[0].resource
+    authorized_item = permissions.authorize(
+        ResourceAction.READ_ITEM_METADATA,
+        principal,
+        item_id,
+        credentials,
+    ).items[0]
+    item_obj = authorized_item.resource
+
+    if authorized_item.row["kind"] == ResourceType.FOLDER:
+        counters = Folder.objects.filter(id=item_obj.id, owner_id=item_obj.owner_id).values(
+            "visible_descendant_file_size",
+            "visible_descendant_folder_count",
+            "visible_descendant_file_count",
+        ).get()
+        response = JsonResponse({
+            "size": counters["visible_descendant_file_size"],
+            "folder_count": counters["visible_descendant_folder_count"],
+            "file_count": counters["visible_descendant_file_count"],
+        }, status=200)
+        response["Cache-Control"] = "private, no-store"
+        return response
 
     if item_obj.type == "Video":
         tracks = []

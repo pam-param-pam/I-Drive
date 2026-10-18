@@ -103,7 +103,8 @@ urlpatterns = [
     path("items/restoreFromTrash", ["PATCH"], restore_from_trash_view, name="move items to trash"),
     path("items/delete", ["POST"], delete_view, name="bulk delete items"),
 
-    path("files/<file_id>/more-info", ["GET"], fetch_additional_info, name="fetch more info about a file"),
+    path("items/<item_id>/more-info", ["GET"], fetch_additional_info, name="fetch more info about an item"),
+    path("files/<item_id>/more-info", ["GET"], fetch_additional_info, name="fetch more info about a file"),
     path("items/<item_id>/rename", ["PATCH"], rename_view, name="rename an item"),
     path("items/<item_id>/password", ['GET'], check_password, name="check password"),
 

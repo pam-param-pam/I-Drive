@@ -16,6 +16,7 @@ class Thumbnail(DiscordAttachmentMixin):
     id = ShortUUIDField(primary_key=True, default=shortuuid.uuid, editable=False)
     file = models.OneToOneField(File, on_delete=models.CASCADE)
     created_at = models.DateTimeField(default=timezone.now)
+    upload_generated = models.BooleanField(default=False)
     iv = models.BinaryField(null=True)
     key = models.BinaryField(null=True)
 
@@ -96,6 +97,7 @@ class Subtitle(DiscordAttachmentMixin):
     id = ShortUUIDField(primary_key=True, default=shortuuid.uuid, editable=False)
     file = models.ForeignKey(File, on_delete=models.CASCADE, related_name="subtitles")
     language = models.CharField(max_length=20)
+    upload_generated = models.BooleanField(default=False)
     iv = models.BinaryField(null=True)
     key = models.BinaryField(null=True)
     created_at = models.DateTimeField(auto_now_add=True)

@@ -27,8 +27,7 @@ def setup_periodic_tasks(sender, **kwargs):
             timedelta(minutes=5), generate_raw_image_thumbnails.s(), name="generate-raw-image-thumbnails",
         )
 
-        from website.tasks.cleanupDiscordTasks import cleanup_user_discord
-        from website.tasks.cleanupDatabaseTasks import cleanup_user_db
+        from website.tasks.cleanup.scheduling import run_cleanup
         from website.tasks.derivedStateTasks import process_folder_hash_work, process_folder_height_repairs
         from website.tasks.namespaceTasks import recover_namespace_operations
         from website.tasks.deletion.scheduling import recover_pending_deletion_jobs
@@ -62,14 +61,8 @@ def setup_periodic_tasks(sender, **kwargs):
 
         sender.add_periodic_task(
             crontab(hour="5", minute="0"),
-            cleanup_user_db.s(),
-            name="cleanup-user-db",
-        )
-
-        sender.add_periodic_task(
-            crontab(hour="5", minute="0"),
-            cleanup_user_discord.s(),
-            name="cleanup-dangling-discord-files",
+            run_cleanup.s(),
+            name="run-cleanup",
         )
 
         print("### ON_AFTER_FINALIZE_SUCCESS", sender)
