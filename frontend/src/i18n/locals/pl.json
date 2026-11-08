@@ -65,6 +65,8 @@
     "selectImageFile": "Wybierz plik zdjęciowy",
     "selectSubtitleFile": "Wybierz plik z napisami",
     "share": "Udostępnij",
+    "skipBackward": "Cofnij o {amount}",
+    "skipForward": "Przewiń do przodu o {amount}",
     "submit": "Zatwierdź",
     "switchView": "Zmień widok",
     "toggleSidebar": "Pokaż/ukryj panel boczny",

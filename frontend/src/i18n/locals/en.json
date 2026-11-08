@@ -65,6 +65,8 @@
     "selectImageFile": "Select image file",
     "selectSubtitleFile": "Select subtitle file",
     "share": "Share",
+    "skipBackward": "Skip backward {amount}",
+    "skipForward": "Skip forward {amount}",
     "submit": "Submit",
     "switchView": "Switch view",
     "toggleSidebar": "Toggle sidebar",
