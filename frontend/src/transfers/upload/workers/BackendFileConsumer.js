@@ -4,9 +4,7 @@ import { PipelineWorker } from "@/transfers/shared/base/PipelineWorker.js"
 import { uploadFileStatus, uploadState } from "@/transfers/upload/constants.js"
 import { workerExitReason } from "@/transfers/shared/constants.js"
 
-const SMALL_FILE_LIMIT = 0.1 * 1024 * 1024
-const NORMAL_FILE_COUNT = 20
-const SMALL_FILE_COUNT = 99
+const MAX_FILES_PER_BATCH = 20
 
 export class BackendFileConsumer extends PipelineWorker {
    constructor({ backendFileQueue, uploadRuntime }) {
@@ -76,11 +74,8 @@ export class BackendFileConsumer extends PipelineWorker {
       let totalSize = 0
       for (const file of this.finishedFiles) totalSize += file.size
 
-      const allFilesAreSmall = this.finishedFiles.every(file => file.size < SMALL_FILE_LIMIT)
-      const fileCountThreshold = allFilesAreSmall ? SMALL_FILE_COUNT : NORMAL_FILE_COUNT
-
       const shouldSave =
-         this.finishedFiles.length > fileCountThreshold ||
+         this.finishedFiles.length >= MAX_FILES_PER_BATCH ||
          totalSize > 100 * 1024 * 1024
 
       if (shouldSave) {
@@ -97,9 +92,6 @@ export class BackendFileConsumer extends PipelineWorker {
 
          await this._saveCurrentFinishedFiles(signal)
 
-         if (this.finishedFiles.length && this.uploadRuntime.uploadState !== uploadState.noInternet) {
-            break
-         }
       }
    }
 
@@ -112,8 +104,7 @@ export class BackendFileConsumer extends PipelineWorker {
 
       this._throwIfAborted(signal)
 
-      const batch = this.finishedFiles
-      this.finishedFiles = []
+      const batch = this.finishedFiles.splice(0, MAX_FILES_PER_BATCH)
 
       this._savePromise = this.saveFiles(batch)
 

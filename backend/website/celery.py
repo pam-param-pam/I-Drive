@@ -15,8 +15,6 @@ app.autodiscover_tasks(RecursiveTaskDiscovery(), related_name=None)
 def setup_periodic_tasks(sender, **kwargs):
     import traceback
 
-    print("### ON_AFTER_FINALIZE", sender)
-
     try:
         from website.tasks.otherTasks import update_router_public_ip
         from website.tasks.raw_image.workflow import generate_raw_image_thumbnails
@@ -44,8 +42,6 @@ def setup_periodic_tasks(sender, **kwargs):
             timedelta(seconds=15), recover_namespace_operations.s(), name="recover-namespace-operations",
         )
 
-        print("### IMPORTS SUCCESS")
-
         sender.add_periodic_task(
             timedelta(seconds=15),
             process_folder_hash_work.s(),
@@ -57,15 +53,11 @@ def setup_periodic_tasks(sender, **kwargs):
             name="process-folder-height-repairs",
         )
 
-        print("### SUPERVISOR ADDED")
-
         sender.add_periodic_task(
             crontab(hour="5", minute="0"),
             run_cleanup.s(),
             name="run-cleanup",
         )
-
-        print("### ON_AFTER_FINALIZE_SUCCESS", sender)
 
     except Exception:
         print("### PERIODIC TASK SETUP FAILED")

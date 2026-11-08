@@ -113,10 +113,10 @@ def set_thumbnail(file_obj: File, thumbnail=None) -> None:
 
 
 def _authorize_file(
-    principal: UserPrincipal,
-    file_id: str,
-    action: ResourceAction,
-    credentials: CredentialSet | None,
+        principal: UserPrincipal,
+        file_id: str,
+        action: ResourceAction,
+        credentials: CredentialSet | None,
 ) -> tuple[LockedFiles, File]:
     """Lock and authorize one file inside the caller's transaction."""
     owner_id = principal.user_id
@@ -124,8 +124,8 @@ def _authorize_file(
     locked = lock_files_with_parents(owner_id, [file_id])
     file_obj = locked.files[str(file_id)]
     permissions.authorize(action, principal, file_id, credentials, resource_type=ResourceType.FILE,
-        locked_hierarchy=locked.hierarchy, locked_files=locked.files,
-    )
+                          locked_hierarchy=locked.hierarchy, locked_files=locked.files,
+                          )
     return locked, file_obj
 
 
@@ -137,11 +137,11 @@ def _delete_removed_attachments(user: User, attachments) -> None:
 
 
 def _remove_related_attachment(
-    principal: UserPrincipal,
-    file_id: str,
-    attachment_id: str,
-    model: Type[Moment] | Type[Subtitle],
-    credentials: CredentialSet | None,
+        principal: UserPrincipal,
+        file_id: str,
+        attachment_id: str,
+        model: Type[Moment] | Type[Subtitle],
+        credentials: CredentialSet | None,
 ) -> FileCommandResult:
     """Remove the database relation first, then delete its remote attachment outside the local transaction."""
     with transaction.atomic():
@@ -234,7 +234,7 @@ def _create_fragment(file_obj: File, data: dict) -> Fragment:
     return result
 
 
-def _create_subtitle(file_obj: File, data: dict, *, upload_generated: bool) -> Subtitle:
+def _create_subtitle(file_obj: File, data: dict, upload_generated: bool) -> Subtitle:
     if file_obj.type != "Video":
         raise BadRequestError(f"Subtitles are not allowed for file type: {file_obj.type}")
 
@@ -337,12 +337,12 @@ def _create_photo_metadata(file_obj: File, metadata: dict) -> PhotoMetadata:
 class FileService:
     @staticmethod
     def complete_raw_image_extraction(
-        owner_id: int,
-        file_id: str,
-        claim_attempts: int,
-        metadata: dict,
-        thumbnail: dict | None = None,
-        failed: bool = False,
+            owner_id: int,
+            file_id: str,
+            claim_attempts: int,
+            metadata: dict,
+            thumbnail: dict | None = None,
+            failed: bool = False,
     ) -> bool:
         """Commit a claimed raw-image result and its cache versions together."""
         from website.services.thumbnail_service import thumbnail_service
@@ -422,8 +422,8 @@ class FileService:
             locked = lock_files_with_parents(owner_id, [], [parent_id])
             parent = locked.hierarchy.folders[str(parent_id)]
             permissions.authorize(ResourceAction.CREATE_CHILD, principal, str(parent.id), credentials,
-                resource_type=ResourceType.FOLDER, locked_hierarchy=locked.hierarchy,
-            )
+                                  resource_type=ResourceType.FOLDER, locked_hierarchy=locked.hierarchy,
+                                  )
 
             existing = File.objects.select_for_update().filter(frontend_id=frontend_id).first()
             if existing:
@@ -522,7 +522,7 @@ class FileService:
         """Create files individually; an already used frontend ID is omitted from the result."""
         user = User.objects.get(id=principal.user_id)
         check_if_bots_exists(user)
-        validate_ids_as_list(files_data, max_length=100)
+        validate_ids_as_list(files_data, max_length=20)
 
         files = []
         for data in files_data:
@@ -625,11 +625,11 @@ class FileService:
             extension = get_file_extension(name)
             new_type = get_file_type(extension)
             if new_type != file_obj.type and (
-                file_obj.tags.exists()
-                or any(model.objects.filter(file_id=file_obj.id).exists() for model in (
+                    file_obj.tags.exists()
+                    or any(model.objects.filter(file_id=file_obj.id).exists() for model in (
                     Thumbnail, Moment, Subtitle, VideoMetadata, RawMetadata, PhotoMetadata,
                     MediaPosition, RawExtractionClaim,
-                ))
+            ))
             ):
                 raise BadRequestError("Cannot change the type of a file with metadata")
             File.objects.filter(id=file_obj.id).update(
@@ -715,8 +715,7 @@ class FileService:
         return [FileCommandResult(str(file_id), version) for file_id, version in refreshed]
 
     @staticmethod
-    def request_deletion(principal: UserPrincipal, file_ids: list[str], credentials: CredentialSet | None = None,
-                         *, job) -> list[FileCommandResult]:
+    def request_deletion(principal: UserPrincipal, file_ids: list[str], credentials: CredentialSet | None = None, *, job) -> list[FileCommandResult]:
         """Authorize and admit deletion roots under the owner's exclusive barrier.
 
         Remote work belongs to the supplied job and begins after admission commits.
@@ -726,8 +725,8 @@ class FileService:
             namespace_lock_service.lock_owner_scope_exclusive(owner_id)
             locked = lock_files_with_parents(owner_id, file_ids)
             permissions.authorize(ResourceAction.REQUEST_DELETE, principal, file_ids=file_ids,
-                credentials=credentials, locked_hierarchy=locked.hierarchy, locked_files=locked.files,
-            )
+                                  credentials=credentials, locked_hierarchy=locked.hierarchy, locked_files=locked.files,
+                                  )
             from website.services.deletion_service import admit_file_deletions
 
             roots = admit_file_deletions(owner_id, locked, request_context=asdict(principal), job=job)
@@ -742,12 +741,7 @@ class FileService:
             return results
 
     @staticmethod
-    def update_media_position(
-        principal: UserPrincipal,
-        file_id: str,
-        position: int,
-        credentials: CredentialSet | None = None,
-    ) -> MediaPosition:
+    def update_media_position(principal: UserPrincipal,file_id: str,position: int, credentials: CredentialSet | None = None) -> MediaPosition:
         position = validate_value(position, int, checks=[NotNegative])
         with transaction.atomic():
             _, file_obj = _authorize_file(principal, file_id, ResourceAction.EDIT_METADATA, credentials)
@@ -757,12 +751,7 @@ class FileService:
             return media_position
 
     @staticmethod
-    def add_tag(
-        principal: UserPrincipal,
-        file_id: str,
-        tag_name: str,
-        credentials: CredentialSet | None = None,
-    ) -> Tag:
+    def add_tag(principal: UserPrincipal, file_id: str, tag_name: str, credentials: CredentialSet | None = None) -> Tag:
         tag_name = validate_value(tag_name, str, checks=[NotEmpty, MaxLength(20)])
         owner_id = principal.user_id
         with transaction.atomic():
@@ -774,12 +763,7 @@ class FileService:
             return tag
 
     @staticmethod
-    def remove_tag(
-        principal: UserPrincipal,
-        file_id: str,
-        tag_id: str,
-        credentials: CredentialSet | None = None,
-    ) -> FileCommandResult:
+    def remove_tag(principal: UserPrincipal, file_id: str, tag_id: str, credentials: CredentialSet | None = None) -> FileCommandResult:
         owner_id = principal.user_id
         with transaction.atomic():
             _, file_obj = _authorize_file(principal, file_id, ResourceAction.EDIT_METADATA, credentials)
@@ -794,12 +778,7 @@ class FileService:
             return FileCommandResult(str(file_obj.id), file_obj.resource_version)
 
     @staticmethod
-    def add_moment(
-        principal: UserPrincipal,
-        file_id: str,
-        data: dict,
-        credentials: CredentialSet | None = None,
-    ) -> Moment:
+    def add_moment(principal: UserPrincipal, file_id: str, data: dict, credentials: CredentialSet | None = None) -> Moment:
         owner_id = principal.user_id
         with transaction.atomic():
             _, file_obj = _authorize_file(principal, file_id, ResourceAction.EDIT_METADATA, credentials)
@@ -824,21 +803,11 @@ class FileService:
             return moment
 
     @staticmethod
-    def remove_moment(
-        principal: UserPrincipal,
-        file_id: str,
-        moment_id: str,
-        credentials: CredentialSet | None = None,
-    ) -> FileCommandResult:
+    def remove_moment(principal: UserPrincipal, file_id: str, moment_id: str, credentials: CredentialSet | None = None) -> FileCommandResult:
         return _remove_related_attachment(principal, file_id, moment_id, Moment, credentials)
 
     @staticmethod
-    def create_subtitle(
-        principal: UserPrincipal,
-        file_id: str,
-        data: dict,
-        credentials: CredentialSet | None = None,
-    ) -> Subtitle:
+    def create_subtitle(principal: UserPrincipal, file_id: str, data: dict, credentials: CredentialSet | None = None) -> Subtitle:
         with transaction.atomic():
             _, file_obj = _authorize_file(principal, file_id, ResourceAction.EDIT_METADATA, credentials)
             subtitle = _create_subtitle(file_obj, data, upload_generated=False)
@@ -847,13 +816,7 @@ class FileService:
             return subtitle
 
     @staticmethod
-    def rename_subtitle(
-        principal: UserPrincipal,
-        file_id: str,
-        subtitle_id: str,
-        language: str,
-        credentials: CredentialSet | None = None,
-    ) -> FileCommandResult:
+    def rename_subtitle(principal: UserPrincipal, file_id: str, subtitle_id: str, language: str, credentials: CredentialSet | None = None) -> FileCommandResult:
         language = validate_value(language, str, checks=[NotEmpty, MaxLength(20)])
         with transaction.atomic():
             _, file_obj = _authorize_file(principal, file_id, ResourceAction.EDIT_METADATA, credentials)
@@ -866,12 +829,7 @@ class FileService:
             return FileCommandResult(str(file_obj.id), file_obj.resource_version)
 
     @staticmethod
-    def remove_subtitle(
-        principal: UserPrincipal,
-        file_id: str,
-        subtitle_id: str,
-        credentials: CredentialSet | None = None,
-    ) -> FileCommandResult:
+    def remove_subtitle(principal: UserPrincipal, file_id: str, subtitle_id: str, credentials: CredentialSet | None = None) -> FileCommandResult:
         return _remove_related_attachment(principal, file_id, subtitle_id, Subtitle, credentials)
 
     @staticmethod
@@ -906,11 +864,7 @@ class FileService:
             return FileCommandResult(str(file_obj.id), file_obj.resource_version)
 
     @staticmethod
-    def _remove_missing_related_attachment(
-        owner_id: int,
-        file_id: str,
-        resource: Moment | Subtitle,
-    ) -> FileCommandResult:
+    def _remove_missing_related_attachment(owner_id: int, file_id: str, resource: Moment | Subtitle) -> FileCommandResult:
         with transaction.atomic():
             namespace_lock_service.lock_owner_scope_shared(owner_id)
             locked = lock_files_with_parents(owner_id, [file_id])
